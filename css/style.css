@@ -394,3 +394,58 @@ textarea {
   font-weight: 600;
   padding: 6px 0;
 }
+
+/* Ernährung */
+.mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.mode-toggle .mode-btn {
+  background: var(--surface-2);
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 12px;
+  transition: background 150ms ease, color 150ms ease;
+}
+.mode-toggle .mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.dish-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.dish-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+.dish-card:hover { border-color: var(--accent); }
+.dish-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.dish-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.dish-name { font-weight: 600; font-size: 0.92rem; }
+.dish-desc { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px; }
+.dish-macro { font-size: 0.82rem; margin-top: 2px; }

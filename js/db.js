@@ -1,5 +1,5 @@
 // Lokale Datenschicht auf Basis von localStorage. Kein Backend, kein Sync.
-import { seedState } from "./seed-data.js";
+import { seedState, seedNutrition } from "./seed-data.js";
 
 const STORAGE_KEY = "trainingstracker:v1";
 
@@ -40,6 +40,31 @@ function migrate(state) {
     if (day4 && day4.exerciseIds.includes("n_hundred")) {
       day4.exerciseIds = ["n_pilates_unterkoerper", "n_pilates_oberkoerper", "n_pilates_ganzkoerper", "n_lauf_tempo"];
       day4.note = "Wahlweise Pilates-Video wie Tag 1, oder Lauf mit Tempowechsel — wöchentlich abwechseln oder nach Lust wählen.";
+      changed = true;
+    }
+  }
+
+  // Ernährungsteil kam nach dem ersten Release dazu — Geräte mit älterem
+  // Datenstand haben state.nutrition noch gar nicht.
+  if (!state.nutrition) {
+    state.nutrition = seedNutrition();
+    changed = true;
+  } else {
+    const seeded = seedNutrition();
+    if (!Array.isArray(state.nutrition.dishes) || state.nutrition.dishes.length === 0) {
+      state.nutrition.dishes = seeded.dishes;
+      changed = true;
+    }
+    if (!state.nutrition.targets) {
+      state.nutrition.targets = seeded.targets;
+      changed = true;
+    }
+    if (!state.nutrition.preferences) {
+      state.nutrition.preferences = seeded.preferences;
+      changed = true;
+    }
+    if (!state.nutrition.days) {
+      state.nutrition.days = {};
       changed = true;
     }
   }
@@ -159,6 +184,41 @@ export const db = {
     const parsed = JSON.parse(json);
     if (!parsed.users || !parsed.exercises) throw new Error("Ungültiges Datenformat");
     state = parsed;
+    save(state);
+  },
+
+  // --- Ernährung (gemeinsam, nicht pro Profil siloed) ---
+
+  getNutritionState() {
+    return state.nutrition;
+  },
+
+  getDishes() {
+    return state.nutrition.dishes;
+  },
+
+  getDish(dishId) {
+    return state.nutrition.dishes.find((d) => d.id === dishId) || null;
+  },
+
+  getNutritionTargets(userId) {
+    return state.nutrition.targets[userId] || null;
+  },
+
+  getPreferences(userId) {
+    return state.nutrition.preferences[userId] || { excludeTags: [] };
+  },
+
+  setPreferences(userId, patch) {
+    state.nutrition.preferences[userId] = { ...this.getPreferences(userId), ...patch };
+    save(state);
+  },
+
+  getDayPlanRaw(dateISO) {
+    return state.nutrition.days[dateISO] || null;
+  },
+
+  saveNutritionState() {
     save(state);
   },
 };

@@ -4,6 +4,7 @@ import * as dashboardView from "./views/dashboard.js";
 import * as logView from "./views/log.js";
 import * as historyView from "./views/history.js";
 import * as settingsView from "./views/settings.js";
+import * as nutritionView from "./views/nutrition.js";
 
 const appEl = document.getElementById("app");
 const topbarEl = document.getElementById("topbar");
@@ -11,6 +12,7 @@ const tabbarEl = document.getElementById("tabbar");
 
 const TABS = [
   { key: "dashboard", label: "Heute", icon: "🏠", href: "#/dashboard" },
+  { key: "nutrition", label: "Ernährung", icon: "🥗", href: "#/nutrition" },
   { key: "history", label: "Verlauf", icon: "📈", href: "#/history" },
   { key: "settings", label: "Einstellungen", icon: "⚙️", href: "#/settings" },
 ];
@@ -75,6 +77,7 @@ function renderChrome(routeName, title, showBack) {
 
 function activeTabFor(routeName) {
   if (routeName === "dashboard" || routeName === "log") return "dashboard";
+  if (routeName === "nutrition") return "nutrition";
   if (routeName === "history") return "history";
   if (routeName === "settings") return "settings";
   return null;
@@ -98,6 +101,7 @@ function render() {
     profile: { view: profileView, title: "Profil", back: false },
     dashboard: { view: dashboardView, title: "Heute", back: false },
     log: { view: logView, title: "Session loggen", back: true },
+    nutrition: { view: nutritionView, title: "Ernährung", back: false },
     history: { view: historyView, title: params[0] ? "Übung" : "Verlauf", back: Boolean(params[0]) },
     settings: { view: settingsView, title: "Einstellungen", back: false },
   };

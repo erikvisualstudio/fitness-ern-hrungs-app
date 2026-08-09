@@ -40,6 +40,14 @@ function render(root, navigate) {
       ${exercises.map((ex) => exerciseRow(ex)).join("")}
     </div>
 
+    <div class="section-title">Ernährungs-Präferenzen (${escapeHtml(user.name)})</div>
+    <div class="card">
+      <p style="margin-bottom:10px;">Gerichte mit einem dieser Tags werden bei ${escapeHtml(user.name)} nie vorgeschlagen (gemeinsam wie getrennt) — z. B. "proteinpulver". Mehrere Tags mit Komma trennen.</p>
+      <label for="exclude-tags-input">Ausgeschlossene Zutaten-Tags</label>
+      <input type="text" id="exclude-tags-input" value="${escapeHtml((db.getPreferences(userId).excludeTags || []).join(", "))}" placeholder="z. B. proteinpulver" style="margin-bottom:10px;" />
+      <button class="btn btn-secondary btn-sm" id="save-preferences">Präferenzen speichern</button>
+    </div>
+
     <div class="section-title">Daten</div>
     <div class="card">
       <button class="btn btn-secondary" id="export-data" style="margin-bottom:10px;">Daten exportieren (JSON)</button>
@@ -110,6 +118,17 @@ function render(root, navigate) {
       showToast("Übung aktualisiert");
       render(root, navigate);
     });
+  });
+
+  root.querySelector("#save-preferences").addEventListener("click", () => {
+    const raw = root.querySelector("#exclude-tags-input").value;
+    const excludeTags = raw
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+    db.setPreferences(userId, { excludeTags });
+    showToast("Präferenzen gespeichert");
+    render(root, navigate);
   });
 
   root.querySelector("#export-data").addEventListener("click", () => {

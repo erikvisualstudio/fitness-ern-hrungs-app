@@ -1,9 +1,10 @@
 # Trainingstracker (PWA)
 
-Persönliche Trainings-Tracking-App für Erik & Nele. Session-Logging pro Übung/Satz,
-automatische Progressionsvorschläge (Double Progression), getrennte Profile,
-komplett lokal (kein Backend, kein Account, keine Cloud) — installierbar als App
-über "Zum Homescreen hinzufügen".
+Persönliche Trainings- & Ernährungs-App für Erik & Nele. Session-Logging pro
+Übung/Satz, automatische Progressionsvorschläge (Double Progression), getrennte
+Fitness-Profile, dazu eine gemeinsame Mahlzeitenplanung — komplett lokal (kein
+Backend, kein Account, keine Cloud) — installierbar als App über "Zum
+Homescreen hinzufügen".
 
 ## Tech-Stack
 
@@ -42,6 +43,12 @@ installieren/öffnen, da die Daten lokal pro Gerät gespeichert werden. Innerhal
 der App gibt es zusätzlich eine Profilauswahl (Erik/Nele) für den Fall, dass
 beide dasselbe Gerät nutzen.
 
+**Ausnahme Ernährung:** Der "Ernährung"-Tab ist bewusst NICHT pro Profil
+getrennt, sondern ein gemeinsamer Haushalts-Datenstand (siehe unten) — der
+lebt aber genauso nur lokal auf dem jeweiligen Gerät, ohne Sync. Empfehlung:
+für die Mahlzeitenplanung ein gemeinsam genutztes Gerät (z. B. Küchen-Tablet)
+verwenden, damit beide dieselbe Planung sehen.
+
 ## GitHub Pages Deployment (Beispiel)
 
 ```bash
@@ -60,11 +67,12 @@ manifest.webmanifest     PWA-Manifest (Icons, Name, Theme-Farbe)
 service-worker.js        Offline-Caching der App-Shell
 css/style.css             Styling (dark-mode-fähig)
 js/db.js                  localStorage-Datenschicht
-js/seed-data.js           Ausgangsdaten (aus den Trainingsplänen importiert)
+js/seed-data.js           Ausgangsdaten (aus den Trainingsplänen + dem Ernährungsplan importiert)
 js/progression.js         Double-Progression-Engine + Blockwochen-/Deload-Logik
+js/nutrition.js            Mahlzeitenplanungs-Engine (Vorschläge, Modus, Reroll)
 js/util.js                 Kleine Hilfsfunktionen (Formatierung, Toast)
 js/app.js                  Router + App-Chrome (Topbar/Tabbar)
-js/views/                  Profilauswahl, Dashboard, Session-Logging, Verlauf, Einstellungen
+js/views/                  Profilauswahl, Dashboard, Session-Logging, Verlauf, Ernährung, Einstellungen
 icons/                     App-Icons (generiert)
 ```
 
@@ -104,6 +112,42 @@ Bei Nele sind die Startgewichte für die Kraftübungen an Tag 3 im
 Original-Plan nicht als kg angegeben (dort steht nur RIR) — beim ersten
 Logging einfach das tatsächlich genutzte Gewicht eintragen, danach greift die
 Progression normal.
+
+## Wie die Ernährungsplanung funktioniert
+
+Der Tab "Ernährung" ist ein Mahlzeiten-**Planer**, kein freier Rezept-Browser
+und kein Kalorien-Tagebuch: pro Tag und Mahlzeit (Frühstück/Mittag/Abend) gibt
+es genau 3 vorausgewählte Optionen aus dem Gerichte-Pool, mit mindestens 1x
+Deftig, 1x Leicht, wenn möglich zusätzlich 1x Schnell.
+
+- **Modus pro Slot:** "Gemeinsam" (eine Wahl für beide, serviert mit den
+  jeweiligen Personen-Portionen) oder "Getrennt" (zwei unabhängige 3er-Vorschläge,
+  gefiltert nach persönlichen Präferenzen und eigener Historie). Frühstück
+  startet standardmäßig getrennt, Mittag/Abend gemeinsam — pro Tag umschaltbar.
+- **Portionsmodell:** jedes Gericht hat eine Basis-Portion (kalibriert auf
+  Nele) plus eine Zusatz-Portion pro Person (aktuell "Erik-Zusatz", im
+  Datenmodell generisch für weitere Personen erweiterbar).
+- **Vorschläge sind deterministisch**, nicht bei jedem Laden neu gewürfelt —
+  derselbe Tag zeigt beim erneuten Öffnen dieselben 3 Optionen. Ein Klick auf
+  "Andere Vorschläge" würfelt gezielt neu (unter Berücksichtigung von
+  Präferenzen und zuletzt gegessenen Gerichten der letzten ~3 Wochen).
+- **Präferenzen als Filter:** in Einstellungen → "Ernährungs-Präferenzen" lässt
+  sich pro Profil eine Liste ausgeschlossener Zutaten-Tags hinterlegen (z. B.
+  Erik: `proteinpulver`). Gerichte mit einem dieser Tags werden für diese
+  Person nie vorgeschlagen — weder gemeinsam (dann für den ganzen Haushalt
+  ausgeschlossen) noch getrennt.
+- **Datenstand ist geräteweit geteilt**, nicht pro Profil siloed wie das
+  Fitness-Tracking — siehe Hinweis oben zu Homescreen-Installation.
+- **Startpool:** 18 Gerichte (6 pro Mahlzeitentyp) aus dem Ernährungsplan-Dokument,
+  in `js/seed-data.js` (`seedNutrition()`) hinterlegt. Erweiterung auf mehr
+  Gerichte: in `seedNutrition()` weitere Einträge mit derselben Struktur
+  (`id`, `mealType`, `name`, `categories`, `excludeTags`, `base`, `extras`)
+  ergänzen — bestehende Nutzer bekommen neue Gerichte automatisch beim
+  nächsten Laden nachgetragen, solange sich die IDs bestehender Gerichte
+  nicht ändern (siehe `migrate()` in `js/db.js`).
+- **Kein Tages-Kalorien-Tracking:** die Kalorien-/Proteinwerte pro Mahlzeit
+  werden nur angezeigt, nicht zu einer Tagesbilanz aufsummiert oder gegen ein
+  Ziel geprüft — bewusst schlank gehalten (siehe Konzept-Dokument).
 
 ## Daten sichern / übertragen
 

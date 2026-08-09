@@ -134,5 +134,72 @@ export function seedState() {
       erik: [],
       nele: [],
     },
+
+    nutrition: seedNutrition(),
+  };
+}
+
+// Ernährungsteil — additiv zum Sport-Tracking, siehe "Ausblick Phase 2: Ernährung"
+// im Konzept-Dokument. Anders als exercises/workoutDays/sessionLogs ist das HIER
+// bewusst NICHT pro Profil siloed: die Mahlzeitenplanung ist eine gemeinsame
+// Haushalts-Entscheidung, sichtbar unabhängig vom aktiven Fitness-Profil.
+//
+// Portionsmodell: jedes Gericht hat eine Basis-Portion (kalibriert auf Nele) und
+// pro Person ein optionales "extras"-Objekt mit Zusatz-Zutaten + resultierender
+// Gesamt-Kalorien-/Proteinmenge für diese Person (aktuell nur "erik", Modell ist
+// generisch für weitere Personen erweiterbar).
+export function seedNutrition() {
+  return {
+    dishes: [
+      // Frühstück
+      { id: "f1", mealType: "breakfast", name: "Porridge-Bowl", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 520, protein: 33, description: "Haferflocken 50 g, Sojamilch 200 ml, Skyr 150 g, Beeren 100 g, Chiasamen 10 g, Mandeln 10 g." }, extras: { erik: { addDescription: "+30 g Haferflocken, +20 g Erdnussbutter, +1 Banane", totalKcal: 810, totalProtein: 42 } } },
+      { id: "f2", mealType: "breakfast", name: "Tofu-Scramble mit Vollkornbrot", categories: ["deftig"], excludeTags: [], base: { kcal: 540, protein: 27, description: "Tofu 130 g mit Kurkuma/Paprika/Spinat angebraten, Olivenöl 5 g, 2 Scheiben Vollkornbrot, ¼ Avocado." }, extras: { erik: { addDescription: "+1 Ei, +1 Scheibe Brot, +30 g Käse", totalKcal: 810, totalProtein: 44 } } },
+      { id: "f3", mealType: "breakfast", name: "Overnight Oats mit Quark", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 480, protein: 31, description: "Haferflocken 50 g, Sojamilch 150 ml, Magerquark 150 g, Banane 100 g, Leinsamen 10 g, über Nacht einweichen." }, extras: { erik: { addDescription: "+30 g Haferflocken, +20 g Erdnussbutter, +100 g Beeren", totalKcal: 810, totalProtein: 40 } } },
+      { id: "f4", mealType: "breakfast", name: "Eiweiß-Pfannkuchen mit Quark", categories: ["deftig"], excludeTags: [], base: { kcal: 480, protein: 31, description: "Haferflocken 40 g + 2 Eier zu Pfannkuchen verarbeitet, dazu Magerquark 150 g, Beeren 100 g, 10 g Honig." }, extras: { erik: { addDescription: "+2 Eier, +30 g Haferflocken, +15 g Nussmus", totalKcal: 810, totalProtein: 45 } } },
+      { id: "f5", mealType: "breakfast", name: "Vollkorn-Toast mit Hüttenkäse & Tomaten", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 555, protein: 29, description: "2-3 Scheiben Vollkornbrot, Hüttenkäse 200 g, Kirschtomaten, Kresse/Basilikum, ¼ Avocado, Olivenöl 5 g." }, extras: { erik: { addDescription: "+1 Scheibe Brot, +100 g Hüttenkäse, +15 g Nüsse", totalKcal: 835, totalProtein: 44 } } },
+      { id: "f6", mealType: "breakfast", name: "Chia-Pudding mit Mango & Skyr", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 520, protein: 28, description: "Chiasamen 40 g, Kokosmilch light 200 ml, Mango 100 g, Kokosraspeln 10 g, Skyr 200 g separat untergerührt." }, extras: { erik: { addDescription: "+100 g Skyr, +30 g Haferflocken als Topping, +15 g Erdnussbutter", totalKcal: 820, totalProtein: 43 } } },
+
+      // Mittag
+      { id: "m1", mealType: "lunch", name: "Linsen-Dal mit Vollkornreis", categories: ["deftig"], excludeTags: [], base: { kcal: 780, protein: 31, description: "Rote Linsen (250 g gekocht), Kokosmilch light 100 ml, Gemüse, Vollkornreis 180 g gekocht, Öl 5 g, Topping: 50 g geröstete Kichererbsen." }, extras: { erik: { addDescription: "+100 g Reis, +100 g Linsen, +150 g Sojajoghurt", totalKcal: 1090, totalProtein: 53 } } },
+      { id: "m2", mealType: "lunch", name: "Kichererbsen-Bowl mit Feta", categories: ["leicht"], excludeTags: [], base: { kcal: 780, protein: 29, description: "Kichererbsen 180 g gekocht, Quinoa 120 g gekocht, geröstetes Gemüse (Süßkartoffel, Zucchini, Paprika) 200 g, Feta 40 g, Tahin-Dressing 15 g." }, extras: { erik: { addDescription: "+80 g Quinoa, +80 g Kichererbsen, +30 g Feta, +10 g Olivenöl", totalKcal: 1140, totalProtein: 44 } } },
+      { id: "m3", mealType: "lunch", name: "Vollkornpasta mit Linsen-Bolognese", categories: ["deftig"], excludeTags: [], base: { kcal: 730, protein: 31, description: "Vollkornpasta 100 g (roh), Linsen-Bolognese (150 g gekochte Linsen, Tomatensauce, Gemüse), Hefeflocken/Parmesan 15 g, Salat mit Olivenöl." }, extras: { erik: { addDescription: "+50 g Pasta, +100 g Linsen, +10 g Olivenöl", totalKcal: 1110, totalProtein: 47 } } },
+      { id: "m4", mealType: "lunch", name: "Falafel-Wrap mit Hummus", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 750, protein: 28, description: "6 Falafel, Vollkorn-Wrap/Fladenbrot 80 g, Hummus 50 g, reichlich Salat/Gemüse, Joghurt-Sauce 50 g." }, extras: { erik: { addDescription: "+2 Falafel, +ein weiterer Wrap, +30 g Hummus", totalKcal: 1100, totalProtein: 41 } } },
+      { id: "m5", mealType: "lunch", name: "Rote-Linsen-Suppe mit Vollkornbrot", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 755, protein: 36, description: "Rote Linsen 280 g gekocht als Suppe mit Gemüse und etwas Kokosmilch, Vollkornbrot 80 g, Olivenöl 5 g, Topping Kürbiskerne 15 g." }, extras: { erik: { addDescription: "+100 g Linsen, +40 g Brot, +15 g Kürbiskerne", totalKcal: 1055, totalProtein: 49 } } },
+      { id: "m6", mealType: "lunch", name: "Gebratener Tempeh mit Gemüse & Reisnudeln", categories: ["deftig"], excludeTags: [], base: { kcal: 695, protein: 38, description: "Tempeh 150 g gebraten, Reisnudeln 80 g (roh), Gemüsepfanne (Brokkoli, Karotten, Paprika), Erdnusssauce 20 g, Sesamöl 5 g." }, extras: { erik: { addDescription: "+50 g Tempeh, +30 g Reisnudeln, +15 g Erdnusssauce", totalKcal: 995, totalProtein: 53 } } },
+
+      // Abend
+      { id: "a1", mealType: "dinner", name: "Bohnen-Chili mit Vollkornbrot", categories: ["deftig"], excludeTags: [], base: { kcal: 650, protein: 35, description: "Gemischte Bohnen 200 g, texturiertes Sojaprotein 30 g (trocken), Tomatensauce/Gemüse, Mais, Vollkornbrot 40 g, geriebener Käse 20 g." }, extras: { erik: { addDescription: "+20 g Sojaprotein, +100 g Bohnen, +eine weitere Brotscheibe", totalKcal: 930, totalProtein: 50 } } },
+      { id: "a2", mealType: "dinner", name: "Tofu-Gemüse-Curry mit Reis", categories: ["deftig"], excludeTags: [], base: { kcal: 670, protein: 29, description: "Tofu 150 g, Kokosmilch 100 ml, Currypaste, Gemüse, Vollkornreis 150 g gekocht, Cashew-Topping 15 g." }, extras: { erik: { addDescription: "+50 g Tofu, +100 g Reis, +15 g Cashews", totalKcal: 1000, totalProtein: 42 } } },
+      { id: "a3", mealType: "dinner", name: "Gefüllte Paprika mit Quinoa & Käse überbacken", categories: ["deftig"], excludeTags: [], base: { kcal: 600, protein: 32, description: "2 Paprika, Füllung aus Quinoa 150 g gekocht + Linsen/Kichererbsen 150 g gekocht + Gemüse, mit 30 g Käse überbacken." }, extras: { erik: { addDescription: "+eine weitere Paprika/größere Portion Füllung, +20 g Käse, +Vollkornbrot 40 g als Beilage", totalKcal: 930, totalProtein: 45 } } },
+      { id: "a4", mealType: "dinner", name: "Shakshuka mit Fladenbrot", categories: ["schnell"], excludeTags: [], base: { kcal: 680, protein: 33, description: "2-3 Eier in Tomaten-Paprika-Sauce mit 100 g Kichererbsen, 30 g Feta, dazu 60 g Vollkorn-/Fladenbrot." }, extras: { erik: { addDescription: "+1 Ei, +weiteres Brot, +50 g Kichererbsen", totalKcal: 930, totalProtein: 45 } } },
+      { id: "a5", mealType: "dinner", name: "Große Salat-Bowl mit gebackenem Tofu", categories: ["leicht"], excludeTags: [], base: { kcal: 613, protein: 30, description: "Tofu 150 g gebacken, reichlich gemischter Salat (Blattsalat, Gurke, Tomate, Mais, Rotkohl), Vinaigrette 15 g, ¼ Avocado, Kürbiskerne 15 g, Vollkornbrot 40 g als Beilage." }, extras: { erik: { addDescription: "+50 g Tofu, +40 g Brot, +15 g Kürbiskerne", totalKcal: 913, totalProtein: 45 } } },
+      { id: "a6", mealType: "dinner", name: "Schnelle Kichererbsen-Pfanne mit Fladenbrot", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 632, protein: 31, description: "Kichererbsen 280 g gekocht in Tomatensauce mit Paprika/Zwiebel/Kreuzkümmel, Fladenbrot/Vollkornbrot 60 g, Sojajoghurt-Dip 80 g, Olivenöl 5 g." }, extras: { erik: { addDescription: "+100 g Kichererbsen, +40 g Brot, +30 g Käse", totalKcal: 982, totalProtein: 48 } } },
+    ],
+
+    // Referenzwerte aus dem Ernährungsplan-Dokument, nur zur Anzeige (kein Tages-Tracking/Abgleich in Phase 2).
+    targets: {
+      erik: {
+        dailyKcal: 3300, dailyProtein: 160, dailyCarbs: 440, dailyFat: 100,
+        meals: { breakfast: { kcal: 820, protein: 40 }, lunch: { kcal: 1100, protein: 50 }, dinner: { kcal: 950, protein: 45 } },
+        rest: { kcal: 330, protein: 25 },
+      },
+      nele: {
+        dailyKcal: 2150, dailyProtein: 110, dailyCarbs: 260, dailyFat: 70,
+        meals: { breakfast: { kcal: 540, protein: 28 }, lunch: { kcal: 750, protein: 35 }, dinner: { kcal: 650, protein: 32 } },
+        rest: { kcal: 210, protein: 15 },
+      },
+    },
+
+    // Präferenzen als Filter: Gerichte mit einem hier gelisteten Tag in excludeTags
+    // werden für diese Person nie vorgeschlagen (weder in "gemeinsam" noch "getrennt").
+    preferences: {
+      erik: { excludeTags: ["proteinpulver"] },
+      nele: { excludeTags: [] },
+    },
+
+    // Tagespläne, keyed nach ISO-Datum. Wird lazy von nutrition.js befüllt
+    // (ensureDayPlan) — hier bewusst leer, damit Vorschläge nicht vorab für
+    // beliebig viele Tage generiert werden.
+    days: {},
   };
 }
