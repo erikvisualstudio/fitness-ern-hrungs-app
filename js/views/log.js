@@ -48,7 +48,16 @@ export function mount(root, { navigate, params }) {
   `;
 
   const list = root.querySelector("#exercise-list");
+  let pilatesBlockInserted = false;
   exercises.forEach((ex) => {
+    if (ex.type === "pilates") {
+      if (!pilatesBlockInserted) {
+        const pilatesExercises = exercises.filter((e) => e.type === "pilates");
+        list.appendChild(buildPilatesGroupBlock(pilatesExercises, suggestions));
+        pilatesBlockInserted = true;
+      }
+      return;
+    }
     list.appendChild(buildExerciseBlock(ex, suggestions.get(ex.id), deload));
   });
 
@@ -178,6 +187,50 @@ function buildExerciseBlock(ex, suggestion, deload) {
     addBtn.textContent = "+ Satz hinzufügen";
     wrap.appendChild(addBtn);
   }
+
+  return wrap;
+}
+
+function categoryLabel(ex) {
+  return ex.name.replace(/^Pilates-Video\s*/, "");
+}
+
+function buildPilatesGroupBlock(pilatesExercises, suggestions) {
+  const wrap = document.createElement("div");
+  wrap.className = "exercise-block";
+
+  wrap.innerHTML = `
+    <h3>Pilates-Video</h3>
+    <p style="margin-top:-4px;">Ein Video für den ganzen Tag — nicht mehrere Kategorien mischen. Passende Länge wählen (z. B. 20-40 Min), die sich auf den gewählten Bereich konzentriert.</p>
+    <div class="field-row">
+      <div>
+        <label for="pilates-category-select">Kategorie heute</label>
+        <select id="pilates-category-select">
+          ${pilatesExercises.map((ex) => `<option value="${ex.id}">${escapeHtml(categoryLabel(ex))}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+    <div id="pilates-safety"></div>
+    <div class="suggestion" id="pilates-suggestion"></div>
+    <div class="sets-container" id="pilates-sets-container"></div>
+  `;
+
+  const select = wrap.querySelector("#pilates-category-select");
+  const safetyHolder = wrap.querySelector("#pilates-safety");
+  const sugg = wrap.querySelector("#pilates-suggestion");
+  const container = wrap.querySelector("#pilates-sets-container");
+
+  function renderForSelected() {
+    const ex = pilatesExercises.find((e) => e.id === select.value);
+    const suggestion = suggestions.get(ex.id);
+    container.dataset.exercise = ex.id;
+    container.innerHTML = setRowHtml(ex, 1, suggestion);
+    sugg.innerHTML = suggestionText(ex, suggestion);
+    safetyHolder.innerHTML = ex.safetyNote ? `<div class="safety-banner">⚠️ ${escapeHtml(ex.safetyNote)}</div>` : "";
+  }
+
+  select.addEventListener("change", renderForSelected);
+  renderForSelected();
 
   return wrap;
 }
