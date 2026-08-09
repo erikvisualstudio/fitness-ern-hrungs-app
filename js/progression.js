@@ -160,6 +160,42 @@ function computeBodyweight(exercise, sessions) {
   };
 }
 
+function computePilates(exercise, sessions) {
+  // Kein Satz-/Wdh.-Tracking: einfach ein YouTube-Video (Bodyweight oder mit leichten
+  // Gewichten) abhaken. Wird 3x in Folge mit gleichem oder höherem Gewicht geloggt,
+  // steigt der Gewichtsvorschlag um einen festen Schritt.
+  const relevant = sessionsWithSets(exercise, sessions);
+  let weight = exercise.startWeight;
+  let streak = 0;
+  let lastEntry = null;
+
+  for (const session of relevant) {
+    const entry = session.sets[exercise.id][0];
+    if (!entry) continue;
+    lastEntry = entry;
+    if (entry.loadMode !== "gewicht" || entry.weight == null) continue;
+
+    if (weight == null || entry.weight < weight) {
+      weight = entry.weight;
+      streak = 1;
+    } else {
+      streak += 1;
+      if (streak >= 3) {
+        weight = weight + exercise.loadStep;
+        streak = 0;
+      }
+    }
+  }
+
+  return {
+    kind: "pilates",
+    weight,
+    lastLoadMode: lastEntry ? lastEntry.loadMode : null,
+    lastDuration: lastEntry ? lastEntry.duration : null,
+    hasHistory: relevant.length > 0,
+  };
+}
+
 function computeCardio(exercise, sessions) {
   const relevant = sessionsWithSets(exercise, sessions);
   let last = null;
@@ -190,6 +226,9 @@ function applyDeload(base, exercise) {
     const duration = base.duration ? Math.max(5, Math.round(base.duration * 0.7)) : base.duration;
     return { ...base, duration, pace: "locker", deload: true };
   }
+  if (base.kind === "pilates") {
+    return { ...base, deload: true, deloadHint: "Bodyweight oder sehr leicht, gerne auch kürzeres Video reicht." };
+  }
   return base;
 }
 
@@ -198,6 +237,7 @@ export function getSuggestion(exercise, sessions, weekInBlock) {
   if (exercise.type === "weighted") base = computeWeighted(exercise, sessions);
   else if (exercise.type === "band") base = computeBand(exercise, sessions);
   else if (exercise.type === "bodyweight") base = computeBodyweight(exercise, sessions);
+  else if (exercise.type === "pilates") base = computePilates(exercise, sessions);
   else base = computeCardio(exercise, sessions);
 
   if (isDeloadWeek(weekInBlock)) return applyDeload(base, exercise);

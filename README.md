@@ -88,6 +88,12 @@ von den ursprünglichen Wochenzahlen:
   bei Dips, wegen Schulter), schlägt die App vor, Zusatzgewicht (Rucksack)
   einzuführen.
 - **Cardio:** keine automatische Progression, nur letzter Wert als Referenz.
+- **Video-Workout (Nele, Pilates):** kein Einzelübungs-Tracking — stattdessen
+  ein passendes YouTube-Video (Unterkörper/Oberkörper/Ganzkörper, frei wählbare
+  Länge) auswählen, durchführen und Dauer + optional genutztes Gewicht (kg pro
+  Hantel) abhaken. Wird 3x in Folge mit gleichem oder höherem Gewicht geloggt,
+  schlägt die App beim nächsten Mal +0,5 kg pro Hantel vor. Bleibt das
+  Gewichtsfeld leer, zählt die Session als Bodyweight (keine Progression).
 - **Deload:** In Woche 4 jedes 4-Wochen-Blocks (automatisch berechnet ab dem
   in den Einstellungen hinterlegten Blockstart-Datum) wird der Vorschlag
   unabhängig von der Progression auf reduziertes Gewicht/Volumen

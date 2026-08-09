@@ -96,6 +96,11 @@ function render(root, navigate) {
         const incrementAmount = panel.querySelector('[data-f="incrementAmount"]').value;
         patch.targetVolume = parseInt(targetVolume, 10) || ex.targetVolume;
         patch.incrementAmount = parseInt(incrementAmount, 10) || ex.incrementAmount;
+      } else if (ex.type === "pilates") {
+        const startWeight = panel.querySelector('[data-f="startWeight"]').value;
+        const loadStep = panel.querySelector('[data-f="loadStep"]').value;
+        patch.startWeight = startWeight === "" ? null : parseFloat(startWeight);
+        patch.loadStep = parseFloat(loadStep) || ex.loadStep;
       }
 
       const safetyNote = panel.querySelector('[data-f="safetyNote"]');
@@ -164,7 +169,7 @@ function exerciseRow(ex) {
 }
 
 function typeLabel(type) {
-  return { weighted: "Freies Gewicht", band: "Band", bodyweight: "Bodyweight", cardio: "Cardio" }[type] || type;
+  return { weighted: "Freies Gewicht", band: "Band", bodyweight: "Bodyweight", cardio: "Cardio", pilates: "Video-Workout" }[type] || type;
 }
 
 function editFields(ex) {
@@ -203,6 +208,14 @@ function editFields(ex) {
       <div class="field-row">
         <div><label>Ziel-Gesamtvolumen</label><input type="number" data-f="targetVolume" value="${ex.targetVolume}" /></div>
         <div><label>Steigerungsschritt</label><input type="number" data-f="incrementAmount" value="${ex.incrementAmount}" /></div>
+      </div>
+    `;
+  }
+  if (ex.type === "pilates") {
+    return `
+      <div class="field-row">
+        <div><label>Aktuelles Gewicht (kg pro Hantel, optional)</label><input type="number" step="0.5" data-f="startWeight" value="${ex.startWeight ?? ""}" /></div>
+        <div><label>Steigerungsschritt (kg)</label><input type="number" step="0.5" data-f="loadStep" value="${ex.loadStep}" /></div>
       </div>
     `;
   }

@@ -85,14 +85,13 @@ export function seedState() {
       ],
 
       nele: [
-        // Tag 1 — Pilates
-        { id: "n_hundred", name: "The Hundred", type: "bodyweight", holdBased: false, perSide: false, sets: 1, targetVolume: 60, incrementAmount: 20, loadType: null, allowLoadProgression: false, safetyNote: null, unitLabel: "Atemzyklen" },
-        { id: "n_rollup", name: "Roll-Up", type: "bodyweight", holdBased: false, perSide: false, sets: 1, targetVolume: 6, incrementAmount: 2, loadType: null, allowLoadProgression: false, safetyNote: null },
-        { id: "n_leg_circles", name: "Leg Circles", type: "bodyweight", holdBased: false, perSide: true, sets: 1, targetVolume: 8, incrementAmount: 2, loadType: null, allowLoadProgression: false, safetyNote: null, unitLabel: "pro Richtung/Bein" },
-        { id: "n_side_leg_series", name: "Side-Lying Leg Series", type: "bodyweight", holdBased: false, perSide: true, sets: 1, targetVolume: 12, incrementAmount: 3, loadType: null, allowLoadProgression: false, safetyNote: null, unitLabel: "pro Bein" },
-        { id: "n_plank_pilates", name: "Plank + Variationen", type: "bodyweight", holdBased: true, perSide: false, sets: 3, targetVolume: 90, incrementAmount: 30, loadType: null, allowLoadProgression: false, safetyNote: null },
-        { id: "n_swimming", name: "Swimming", type: "bodyweight", holdBased: true, perSide: false, sets: 1, targetVolume: 20, incrementAmount: 10, loadType: null, allowLoadProgression: false, safetyNote: null },
-        { id: "n_bridge", name: "Bridge / Glute Bridge", type: "bodyweight", holdBased: false, perSide: false, sets: 3, targetVolume: 45, incrementAmount: 15, loadType: null, allowLoadProgression: false, safetyNote: null },
+        // Tag 1 — Pilates: kein Einzelübungs-Tracking, stattdessen ein passendes YouTube-Video
+        // (Unterkörper/Oberkörper/Ganzkörper, frei wählbare Länge) abhaken. Gewicht ist optional
+        // (Bodyweight oder ganz leichte Kurzhanteln) und steigt nach 3x gleichbleibendem Gewicht
+        // um einen festen Schritt (siehe progression.js, Typ "pilates").
+        { id: "n_pilates_unterkoerper", name: "Pilates-Video Unterkörper", type: "pilates", startWeight: null, loadStep: 0.5, safetyNote: null },
+        { id: "n_pilates_oberkoerper", name: "Pilates-Video Oberkörper", type: "pilates", startWeight: null, loadStep: 0.5, safetyNote: null },
+        { id: "n_pilates_ganzkoerper", name: "Pilates-Video Ganzkörper", type: "pilates", startWeight: null, loadStep: 0.5, safetyNote: null },
 
         // Tag 2 — Lauf ruhig
         { id: "n_lauf_ruhig", name: "Lauf ruhig", type: "cardio", cardioDefault: { duration: 27, pace: "locker" } },
@@ -123,10 +122,10 @@ export function seedState() {
         { id: "e_day5", name: "Tag 5 — Park: Ganzkörper-Zirkel", location: "Park", note: "Zirkel mit 45 Sek Pause zwischen Übungen, 2 Min zwischen Runden. Zielrunden: 4 (Deload-Woche: 2). Vorher Schulter-Warm-up. Wenn die Zielzahl in späteren Runden nicht mehr sauber machbar ist: so viele saubere wie möglich, keine Halb-Wiederholungen zählen.", exerciseIds: ["e_hinweg_t5", "e_klimmzuege_zirkel", "e_liegestuetze_zirkel", "e_ausfallschritte_zirkel", "e_situps_zirkel", "e_rueckweg_t5"] },
       ],
       nele: [
-        { id: "n_day1", name: "Tag 1 — Pilates", location: "Zuhause", note: "Ganzkörper, Rumpf-Fokus, ca. 35-45 Min, fließende Übergänge, Fokus auf Atmung.", exerciseIds: ["n_hundred", "n_rollup", "n_leg_circles", "n_side_leg_series", "n_plank_pilates", "n_swimming", "n_bridge"] },
+        { id: "n_day1", name: "Tag 1 — Pilates", location: "Zuhause", note: "Passendes YouTube-Video wählen (Unterkörper/Oberkörper/Ganzkörper, ~20-40 Min), durchführen, danach hier abhaken. Bodyweight oder mit ganz leichten Kurzhanteln — Gewicht ist optional.", exerciseIds: ["n_pilates_unterkoerper", "n_pilates_oberkoerper", "n_pilates_ganzkoerper"] },
         { id: "n_day2", name: "Tag 2 — Lauf ruhig", location: null, note: "Locker, Gespräch sollte möglich sein.", exerciseIds: ["n_lauf_ruhig"] },
         { id: "n_day3", name: "Tag 3 — Ganzkörper-Kraft", location: "Zuhause", note: "Startgewichte sind im Plan nicht als kg vorgegeben (nur RIR) — beim ersten Logging das tatsächlich genutzte Gewicht eintragen, danach übernimmt die Progression.", exerciseIds: ["n_goblet_squat", "n_rudern_vorgebeugt", "n_schulterdruecken", "n_hip_thrust", "n_rdl", "n_plank_bauch", "n_russian_twist"] },
-        { id: "n_day4", name: "Tag 4 — Pilates oder Lauf mit Tempowechsel", location: null, note: "Wahlweise Pilates wie Tag 1, oder Lauf mit Tempowechsel — wöchentlich abwechseln oder nach Lust wählen.", exerciseIds: ["n_hundred", "n_rollup", "n_leg_circles", "n_side_leg_series", "n_plank_pilates", "n_swimming", "n_bridge", "n_lauf_tempo"] },
+        { id: "n_day4", name: "Tag 4 — Pilates oder Lauf mit Tempowechsel", location: null, note: "Wahlweise Pilates-Video wie Tag 1, oder Lauf mit Tempowechsel — wöchentlich abwechseln oder nach Lust wählen.", exerciseIds: ["n_pilates_unterkoerper", "n_pilates_oberkoerper", "n_pilates_ganzkoerper", "n_lauf_tempo"] },
         { id: "n_day5", name: "Tag 5 (optional) — Lockerer Lauf / Mobility", location: null, note: "Erster Tag, der bei Zeitmangel oder Müdigkeit gestrichen wird. Alternativ 20 Min Mobility/Dehnen (nicht separat getrackt).", exerciseIds: ["n_lauf_locker_t5"] },
       ],
     },

@@ -91,6 +91,14 @@ export function mount(root, { navigate, params }) {
           const duration = parseInt(row.querySelector('[data-field="duration"]').value, 10);
           const pace = row.querySelector('[data-field="pace"]').value;
           if (!Number.isNaN(duration)) entries.push({ duration, pace });
+        } else if (ex.type === "pilates") {
+          const duration = parseInt(row.querySelector('[data-field="duration"]').value, 10);
+          const weightRaw = row.querySelector('[data-field="weight"]').value;
+          if (!Number.isNaN(duration)) {
+            const weight = weightRaw === "" ? null : parseFloat(weightRaw);
+            const hasWeight = weight != null && !Number.isNaN(weight);
+            entries.push({ loadMode: hasWeight ? "gewicht" : "bodyweight", weight: hasWeight ? weight : null, duration });
+          }
         }
       });
 
@@ -155,7 +163,7 @@ function buildExerciseBlock(ex, suggestion, deload) {
   container.className = "sets-container";
   container.dataset.exercise = ex.id;
 
-  const setCount = ex.type === "cardio" ? 1 : ex.sets || 1;
+  const setCount = ex.type === "cardio" || ex.type === "pilates" ? 1 : ex.sets || 1;
   let rowsHtml = "";
   for (let i = 1; i <= setCount; i++) {
     rowsHtml += setRowHtml(ex, i, suggestion);
@@ -163,7 +171,7 @@ function buildExerciseBlock(ex, suggestion, deload) {
   container.innerHTML = rowsHtml;
   wrap.appendChild(container);
 
-  if (ex.type !== "cardio") {
+  if (ex.type !== "cardio" && ex.type !== "pilates") {
     const addBtn = document.createElement("button");
     addBtn.className = "link-btn";
     addBtn.dataset.addSet = ex.id;
@@ -192,6 +200,14 @@ function suggestionText(ex, s) {
   }
   if (ex.type === "cardio") {
     return s.duration ? `Referenz: <strong>${s.duration} Min</strong>, ${escapeHtml(s.pace || "")}` : "Dauer & Tempo eintragen";
+  }
+  if (ex.type === "pilates") {
+    const weightTxt =
+      s.weight != null
+        ? `Vorschlag falls mit Gewicht: <strong>${fmtNum(s.weight)} kg pro Hantel</strong>`
+        : "Bodyweight oder ganz leichtes Gewicht — dir überlassen";
+    const deloadTxt = s.deload && s.deloadHint ? `<br/>${escapeHtml(s.deloadHint)}` : "";
+    return `Passendes Video wählen und Dauer eintragen. ${weightTxt}${deloadTxt}`;
   }
   return "";
 }
@@ -237,6 +253,15 @@ function setRowHtml(ex, index, suggestion) {
         <input list="pace-options" data-field="pace" value="${escapeHtml(pace)}" />
         <datalist id="pace-options">${PACE_OPTIONS.map((p) => `<option value="${p}">`).join("")}</datalist>
       </div>
+    </div>`;
+  }
+  if (ex.type === "pilates") {
+    const w = suggestion && suggestion.weight != null ? suggestion.weight : "";
+    return `<div class="set-row">
+      <div class="field"><label>Minuten</label><input type="number" min="0" inputmode="numeric" data-field="duration" list="pilates-duration-options" />
+        <datalist id="pilates-duration-options"><option value="20"><option value="30"><option value="40"></datalist>
+      </div>
+      <div class="field"><label>kg pro Hantel (optional)</label><input type="number" step="0.5" min="0" inputmode="decimal" data-field="weight" placeholder="${w !== "" ? fmtNum(w) : "Bodyweight"}" /></div>
     </div>`;
   }
   return "";

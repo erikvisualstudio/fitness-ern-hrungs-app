@@ -112,6 +112,11 @@ function formatSets(ex, sets) {
     return `${sets.map((s) => s[key]).join("+")} = ${total}`;
   }
   if (ex.type === "cardio") return sets.map((s) => `${s.duration} Min, ${escapeHtml(s.pace || "")}`).join(", ");
+  if (ex.type === "pilates") {
+    return sets
+      .map((s) => `${s.duration} Min, ${s.loadMode === "gewicht" ? `${fmtNum(s.weight)}kg/Hantel` : "Bodyweight"}`)
+      .join(", ");
+  }
   return "";
 }
 
@@ -124,6 +129,7 @@ function metricForSession(ex, sets) {
     return sets.reduce((sum, s) => sum + (Number(s[key]) || 0), 0);
   }
   if (ex.type === "cardio") return sets[0] ? sets[0].duration : null;
+  if (ex.type === "pilates") return sets[0] ? sets[0].duration : null;
   return null;
 }
 
@@ -156,5 +162,6 @@ function metricLabel(ex) {
   if (ex.type === "band") return "Wiederholungen (max. Satz)";
   if (ex.type === "bodyweight") return ex.holdBased ? "Gesamtdauer (Sek.)" : "Gesamtvolumen (Wdh.)";
   if (ex.type === "cardio") return "Dauer (Min)";
+  if (ex.type === "pilates") return "Dauer (Min)";
   return "";
 }
