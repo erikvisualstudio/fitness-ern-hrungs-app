@@ -3,6 +3,50 @@ import { seedState } from "./seed-data.js";
 
 const STORAGE_KEY = "trainingstracker:v1";
 
+// Bereits gespeicherte Geräte behalten ihre Daten aus dem allerersten Start —
+// spätere Änderungen an seed-data.js wirken sich sonst NICHT mehr aus, weil load()
+// nur bei komplett leerem localStorage neu seeded. migrate() patcht bestehende
+// Datenstände inkrementell nach, wenn sich Übungsdefinitionen strukturell ändern.
+function migrate(state) {
+  let changed = false;
+
+  const nele = state.exercises && state.exercises.nele;
+  if (nele) {
+    const oldPilatesIds = ["n_hundred", "n_rollup", "n_leg_circles", "n_side_leg_series", "n_plank_pilates", "n_swimming", "n_bridge"];
+    const hasOld = nele.some((e) => oldPilatesIds.includes(e.id));
+    const hasNew = nele.some((e) => e.id === "n_pilates_oberkoerper");
+    if (hasOld || !hasNew) {
+      state.exercises.nele = nele.filter((e) => !oldPilatesIds.includes(e.id));
+      if (!hasNew) {
+        state.exercises.nele.push(
+          { id: "n_pilates_unterkoerper", name: "Pilates-Video Unterkörper", type: "pilates", startWeight: null, loadStep: 0.5, safetyNote: null },
+          { id: "n_pilates_oberkoerper", name: "Pilates-Video Oberkörper", type: "pilates", startWeight: null, loadStep: 0.5, safetyNote: null },
+          { id: "n_pilates_ganzkoerper", name: "Pilates-Video Ganzkörper", type: "pilates", startWeight: null, loadStep: 0.5, safetyNote: null }
+        );
+      }
+      changed = true;
+    }
+  }
+
+  const days = state.workoutDays && state.workoutDays.nele;
+  if (days) {
+    const day1 = days.find((d) => d.id === "n_day1");
+    if (day1 && day1.exerciseIds.includes("n_hundred")) {
+      day1.exerciseIds = ["n_pilates_unterkoerper", "n_pilates_oberkoerper", "n_pilates_ganzkoerper"];
+      day1.note = "Passendes YouTube-Video wählen (Unterkörper/Oberkörper/Ganzkörper, ~20-40 Min), durchführen, danach hier abhaken. Bodyweight oder mit ganz leichten Kurzhanteln — Gewicht ist optional.";
+      changed = true;
+    }
+    const day4 = days.find((d) => d.id === "n_day4");
+    if (day4 && day4.exerciseIds.includes("n_hundred")) {
+      day4.exerciseIds = ["n_pilates_unterkoerper", "n_pilates_oberkoerper", "n_pilates_ganzkoerper", "n_lauf_tempo"];
+      day4.note = "Wahlweise Pilates-Video wie Tag 1, oder Lauf mit Tempowechsel — wöchentlich abwechseln oder nach Lust wählen.";
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
 function load() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) {
@@ -11,7 +55,9 @@ function load() {
     return initial;
   }
   try {
-    return JSON.parse(raw);
+    const state = JSON.parse(raw);
+    if (migrate(state)) save(state);
+    return state;
   } catch (e) {
     console.error("Konnte gespeicherte Daten nicht lesen, setze zurück.", e);
     const initial = seedState();
