@@ -449,3 +449,49 @@ textarea {
 .dish-name { font-weight: 600; font-size: 0.92rem; }
 .dish-desc { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px; }
 .dish-macro { font-size: 0.82rem; margin-top: 2px; }
+
+.actual-row {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.adjust-panel {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.ingredient-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.ingredient-row select {
+  flex: 2;
+  min-width: 140px;
+}
+.ingredient-row input[type="number"] {
+  flex: 1;
+  min-width: 70px;
+}
+.ingredient-row .rm {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 1.1rem;
+  padding: 4px 6px;
+  flex-shrink: 0;
+}
+.new-ingredient-fields {
+  display: none;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 4px;
+}
+.new-ingredient-fields input { flex: 1; min-width: 100px; }

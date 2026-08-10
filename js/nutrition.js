@@ -9,6 +9,13 @@
 //
 // Party-Konzept: "shared" für Modus "gemeinsam" (eine Wahl für beide), oder die
 // jeweilige userId ("erik"/"nele") für Modus "getrennt" (unabhängige Wahl pro Person).
+// Das ist rein für die PLANUNG (welche 3 Optionen, welche Wahl gilt "offiziell").
+//
+// "Tatsächlich gegessen" (actual) ist davon unabhängig IMMER pro echter Person
+// (erik/nele) — auch bei einer gemeinsamen Wahl kann jede Person individuell
+// abweichen (weniger Haferflocken geschafft, Zutat ersetzt, komplett anderes
+// Gericht). actual[personId] überschreibt für den Tag die aus dem Plan
+// berechneten Werte; bleibt es leer, gilt einfach die Portion aus dem Plan.
 
 export const MEAL_TYPES = ["breakfast", "lunch", "dinner"];
 export const MEAL_LABELS = { breakfast: "Frühstück", lunch: "Mittag", dinner: "Abend" };
@@ -34,6 +41,10 @@ function hashStringToSeed(str) {
     h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
   }
   return h;
+}
+
+function fmtAmt(n) {
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
 }
 
 export function partiesForMode(mode) {
@@ -140,8 +151,10 @@ export function ensureDayPlan(nutrition, dateISO) {
         rerollSeed: {},
         proposals: {},
         choice: {},
+        actual: { erik: null, nele: null },
       };
     }
+    if (!day[mealType].actual) day[mealType].actual = { erik: null, nele: null };
     ensureProposals(nutrition, dateISO, mealType);
   });
   return day;
@@ -170,13 +183,146 @@ export function setChoice(nutrition, dateISO, mealType, party, dishId) {
   slot.choice[party] = slot.choice[party] === dishId ? null : dishId;
 }
 
-// Liefert {kcal, protein, description} für die Portion einer Person bei einem
-// Gericht — Basis-Portion für Nele (bzw. jede Person ohne eigenen extras-Eintrag),
-// sonst die Gesamt-Portion aus extras[userId].
-export function portionFor(dish, userId) {
+// --- Zutaten / Makro-Berechnung ---
+
+export function computeMacros(ingredientList, ingredientsDB) {
+  let kcal = 0;
+  let protein = 0;
+  ingredientList.forEach(({ ingredientId, amount }) => {
+    const ing = ingredientsDB.find((x) => x.id === ingredientId);
+    if (!ing) return;
+    kcal += (ing.kcalPer100 * amount) / 100;
+    protein += (ing.proteinPer100 * amount) / 100;
+  });
+  return { kcal: Math.round(kcal), protein: Math.round(protein * 10) / 10 };
+}
+
+export function formatIngredientList(list, ingredientsDB, signed = false) {
+  return list
+    .filter((i) => i.amount !== 0)
+    .map(({ ingredientId, amount }) => {
+      const ing = ingredientsDB.find((x) => x.id === ingredientId);
+      if (!ing) return null;
+      const sign = signed ? (amount >= 0 ? "+" : "−") : "";
+      const amt = signed ? Math.abs(amount) : amount;
+      return `${sign}${ing.name} ${fmtAmt(amt)}${ing.unit}`;
+    })
+    .filter(Boolean)
+    .join(", ");
+}
+
+export function mergeIngredients(baseList, deltaList) {
+  const map = new Map(baseList.map((i) => [i.ingredientId, i.amount]));
+  deltaList.forEach(({ ingredientId, amount }) => {
+    map.set(ingredientId, (map.get(ingredientId) || 0) + amount);
+  });
+  const result = [];
+  map.forEach((amount, ingredientId) => {
+    if (amount > 0) result.push({ ingredientId, amount });
+  });
+  return result;
+}
+
+export function diffIngredientLists(newList, baseList) {
+  const baseMap = new Map(baseList.map((i) => [i.ingredientId, i.amount]));
+  const newMap = new Map(newList.map((i) => [i.ingredientId, i.amount]));
+  const ids = new Set([...baseMap.keys(), ...newMap.keys()]);
+  const result = [];
+  ids.forEach((id) => {
+    const delta = (newMap.get(id) || 0) - (baseMap.get(id) || 0);
+    if (delta !== 0) result.push({ ingredientId: id, amount: delta });
+  });
+  return result;
+}
+
+// Voll aufgelöste Zutatenliste für die Portion einer Person bei einem Gericht
+// (Basis, oder Basis + Zusatz-Delta falls für diese Person ein extras-Eintrag existiert).
+export function resolvePersonIngredients(dish, userId) {
   const extra = dish.extras && dish.extras[userId];
-  if (extra) {
-    return { kcal: extra.totalKcal, protein: extra.totalProtein, description: dish.base.description, addDescription: extra.addDescription };
+  if (extra) return mergeIngredients(dish.base.ingredients, extra.addIngredients);
+  return dish.base.ingredients.slice();
+}
+
+export function portionFor(dish, userId, ingredientsDB) {
+  const fullList = resolvePersonIngredients(dish, userId);
+  const macros = computeMacros(fullList, ingredientsDB);
+  const description = formatIngredientList(dish.base.ingredients, ingredientsDB);
+  const extra = dish.extras && dish.extras[userId];
+  const addDescription = extra ? formatIngredientList(extra.addIngredients, ingredientsDB, true) : null;
+  return { kcal: macros.kcal, protein: macros.protein, description, addDescription, ingredients: fullList };
+}
+
+// Schreibt eine dauerhafte Änderung ins Rezept zurück: bei einer Person mit
+// eigenem extras-Eintrag (z. B. Erik) wird nur das Delta zur Basis aktualisiert
+// (die Basis-Portion bleibt für alle anderen Personen unverändert), sonst wird
+// direkt die Basis-Portion überschrieben (wirkt sich dann auf alle Personen aus,
+// die keine eigene extras-Portion haben).
+export function applyPermanentEdit(nutrition, dishId, userId, newIngredients) {
+  const dish = nutrition.dishes.find((d) => d.id === dishId);
+  if (!dish) return;
+  if (dish.extras && dish.extras[userId]) {
+    dish.extras[userId].addIngredients = diffIngredientLists(newIngredients, dish.base.ingredients);
+  } else {
+    dish.base.ingredients = newIngredients;
   }
-  return { kcal: dish.base.kcal, protein: dish.base.protein, description: dish.base.description, addDescription: null };
+}
+
+// --- "Tatsächlich gegessen" pro Person (unabhängig vom Modus) ---
+
+export function getResolvedChoice(nutrition, dateISO, mealType, personId) {
+  const slot = nutrition.days[dateISO] && nutrition.days[dateISO][mealType];
+  if (!slot) return null;
+  if (slot.mode === "gemeinsam") return slot.choice.shared || null;
+  return slot.choice[personId] || null;
+}
+
+export function setOverride(nutrition, dateISO, mealType, personId, ingredients, note) {
+  const slot = nutrition.days[dateISO][mealType];
+  if (!slot.actual) slot.actual = {};
+  slot.actual[personId] = { source: "override", name: null, ingredients, note: note || null };
+}
+
+export function setCustomEntry(nutrition, dateISO, mealType, personId, name, ingredients, note) {
+  const slot = nutrition.days[dateISO][mealType];
+  if (!slot.actual) slot.actual = {};
+  slot.actual[personId] = { source: "custom", name, ingredients, note: note || null };
+}
+
+export function clearActual(nutrition, dateISO, mealType, personId) {
+  const slot = nutrition.days[dateISO][mealType];
+  if (slot.actual) slot.actual[personId] = null;
+}
+
+// Liefert {kcal, protein, name, source, note, ingredients} für das, was eine
+// Person bei dieser Mahlzeit tatsächlich isst — override/custom falls gesetzt,
+// sonst aus dem Plan berechnet. null, wenn noch gar nichts gewählt wurde.
+export function getPersonMacros(nutrition, ingredientsDB, dateISO, mealType, personId) {
+  const slot = nutrition.days[dateISO] && nutrition.days[dateISO][mealType];
+  if (!slot) return null;
+
+  const actual = slot.actual && slot.actual[personId];
+  if (actual) {
+    const macros = computeMacros(actual.ingredients, ingredientsDB);
+    return { kcal: macros.kcal, protein: macros.protein, name: actual.name, source: actual.source, note: actual.note, ingredients: actual.ingredients };
+  }
+
+  const dishId = getResolvedChoice(nutrition, dateISO, mealType, personId);
+  if (!dishId) return null;
+  const dish = nutrition.dishes.find((d) => d.id === dishId);
+  if (!dish) return null;
+  const portion = portionFor(dish, personId, ingredientsDB);
+  return { kcal: portion.kcal, protein: portion.protein, name: dish.name, source: "plan", note: null, ingredients: portion.ingredients };
+}
+
+export function sumDailyActual(nutrition, ingredientsDB, dateISO, personId) {
+  let kcal = 0;
+  let protein = 0;
+  MEAL_TYPES.forEach((mealType) => {
+    const m = getPersonMacros(nutrition, ingredientsDB, dateISO, mealType, personId);
+    if (m) {
+      kcal += m.kcal;
+      protein += m.protein;
+    }
+  });
+  return { kcal: Math.round(kcal), protein: Math.round(protein * 10) / 10 };
 }

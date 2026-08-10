@@ -145,38 +145,104 @@ export function seedState() {
 // Haushalts-Entscheidung, sichtbar unabhängig vom aktiven Fitness-Profil.
 //
 // Portionsmodell: jedes Gericht hat eine Basis-Portion (kalibriert auf Nele) und
-// pro Person ein optionales "extras"-Objekt mit Zusatz-Zutaten + resultierender
-// Gesamt-Kalorien-/Proteinmenge für diese Person (aktuell nur "erik", Modell ist
-// generisch für weitere Personen erweiterbar).
+// pro Person ein optionales "extras"-Objekt mit Zusatz-Zutaten (als Delta-Menge
+// relativ zur Basis) für diese Person (aktuell nur "erik", Modell ist generisch
+// für weitere Personen erweiterbar).
+//
+// Zutaten-Modell: Gerichte referenzieren eine gemeinsame Zutaten-Datenbank
+// (kcal/Protein pro 100 g bzw. 100 ml) statt fixer Gesamtwerte. kcal/Protein
+// pro Portion werden daraus live berechnet (siehe computeMacros in nutrition.js)
+// — das erlaubt Mengen-Anpassungen (z. B. "nur 60 g Haferflocken statt 80 g")
+// oder Zutaten-Tausch (z. B. Sojajoghurt statt Skyr), ohne Werte doppelt pflegen
+// zu müssen. Die kcal/Protein-Werte hier sind eigene Näherungen auf Zutatenbasis
+// und weichen deshalb leicht von den (ebenfalls nur grob geschätzten) Summen im
+// Ernährungsplan-Dokument ab — beide sind Schätzungen, keine exakte Nährwertdatenbank.
+function ingredientsDB() {
+  return [
+    { id: "haferflocken", name: "Haferflocken", unit: "g", kcalPer100: 370, proteinPer100: 13 },
+    { id: "sojamilch", name: "Sojamilch", unit: "ml", kcalPer100: 33, proteinPer100: 3.3 },
+    { id: "skyr", name: "Skyr", unit: "g", kcalPer100: 63, proteinPer100: 11 },
+    { id: "beeren", name: "Beeren (gemischt)", unit: "g", kcalPer100: 50, proteinPer100: 1 },
+    { id: "chiasamen", name: "Chiasamen", unit: "g", kcalPer100: 486, proteinPer100: 17 },
+    { id: "mandeln", name: "Mandeln", unit: "g", kcalPer100: 579, proteinPer100: 21 },
+    { id: "erdnussbutter", name: "Erdnussbutter", unit: "g", kcalPer100: 588, proteinPer100: 25 },
+    { id: "banane", name: "Banane", unit: "g", kcalPer100: 89, proteinPer100: 1.1 },
+    { id: "tofu", name: "Tofu", unit: "g", kcalPer100: 145, proteinPer100: 15 },
+    { id: "olivenoel", name: "Olivenöl", unit: "g", kcalPer100: 884, proteinPer100: 0 },
+    { id: "vollkornbrot", name: "Vollkornbrot", unit: "g", kcalPer100: 250, proteinPer100: 9 },
+    { id: "avocado", name: "Avocado", unit: "g", kcalPer100: 160, proteinPer100: 2 },
+    { id: "ei", name: "Ei", unit: "g", kcalPer100: 155, proteinPer100: 13 },
+    { id: "kaese", name: "Käse", unit: "g", kcalPer100: 380, proteinPer100: 27 },
+    { id: "magerquark", name: "Magerquark", unit: "g", kcalPer100: 67, proteinPer100: 12 },
+    { id: "honig", name: "Honig", unit: "g", kcalPer100: 304, proteinPer100: 0.3 },
+    { id: "nussmus", name: "Nussmus", unit: "g", kcalPer100: 614, proteinPer100: 21 },
+    { id: "huettenkaese", name: "Hüttenkäse", unit: "g", kcalPer100: 98, proteinPer100: 12 },
+    { id: "kirschtomaten", name: "Kirschtomaten", unit: "g", kcalPer100: 18, proteinPer100: 0.9 },
+    { id: "kraeuter", name: "Kräuter (Kresse/Basilikum)", unit: "g", kcalPer100: 25, proteinPer100: 2.5 },
+    { id: "kokosmilch_light", name: "Kokosmilch light", unit: "ml", kcalPer100: 80, proteinPer100: 1.2 },
+    { id: "kokosmilch", name: "Kokosmilch", unit: "ml", kcalPer100: 200, proteinPer100: 2 },
+    { id: "mango", name: "Mango", unit: "g", kcalPer100: 60, proteinPer100: 0.8 },
+    { id: "kokosraspeln", name: "Kokosraspeln", unit: "g", kcalPer100: 660, proteinPer100: 6.9 },
+    { id: "linsen_rot", name: "Rote Linsen (gekocht)", unit: "g", kcalPer100: 116, proteinPer100: 9 },
+    { id: "gemuese", name: "Gemüse (gemischt)", unit: "g", kcalPer100: 35, proteinPer100: 2 },
+    { id: "vollkornreis", name: "Vollkornreis (gekocht)", unit: "g", kcalPer100: 123, proteinPer100: 2.6 },
+    { id: "kichererbsen", name: "Kichererbsen (gekocht)", unit: "g", kcalPer100: 164, proteinPer100: 8.9 },
+    { id: "quinoa", name: "Quinoa (gekocht)", unit: "g", kcalPer100: 120, proteinPer100: 4.4 },
+    { id: "feta", name: "Feta", unit: "g", kcalPer100: 264, proteinPer100: 14 },
+    { id: "tahin", name: "Tahin", unit: "g", kcalPer100: 595, proteinPer100: 17 },
+    { id: "vollkornpasta", name: "Vollkornpasta (roh)", unit: "g", kcalPer100: 348, proteinPer100: 13 },
+    { id: "hefeflocken", name: "Hefeflocken/Parmesan", unit: "g", kcalPer100: 385, proteinPer100: 40 },
+    { id: "falafel", name: "Falafel", unit: "g", kcalPer100: 333, proteinPer100: 13 },
+    { id: "fladenbrot", name: "Fladenbrot/Wrap", unit: "g", kcalPer100: 275, proteinPer100: 9 },
+    { id: "hummus", name: "Hummus", unit: "g", kcalPer100: 166, proteinPer100: 8 },
+    { id: "sojajoghurt", name: "Sojajoghurt", unit: "g", kcalPer100: 43, proteinPer100: 3.5 },
+    { id: "kuerbiskerne", name: "Kürbiskerne", unit: "g", kcalPer100: 559, proteinPer100: 30 },
+    { id: "tempeh", name: "Tempeh", unit: "g", kcalPer100: 193, proteinPer100: 19 },
+    { id: "reisnudeln", name: "Reisnudeln (roh)", unit: "g", kcalPer100: 360, proteinPer100: 6 },
+    { id: "erdnusssauce", name: "Erdnusssauce", unit: "g", kcalPer100: 280, proteinPer100: 10 },
+    { id: "sesamoel", name: "Sesamöl", unit: "g", kcalPer100: 884, proteinPer100: 0 },
+    { id: "bohnen", name: "Gemischte Bohnen (gekocht)", unit: "g", kcalPer100: 127, proteinPer100: 8.7 },
+    { id: "sojaprotein", name: "Sojaprotein texturiert (trocken)", unit: "g", kcalPer100: 330, proteinPer100: 52 },
+    { id: "mais", name: "Mais", unit: "g", kcalPer100: 86, proteinPer100: 3.3 },
+    { id: "currypaste", name: "Currypaste", unit: "g", kcalPer100: 100, proteinPer100: 2 },
+    { id: "cashewkerne", name: "Cashewkerne", unit: "g", kcalPer100: 553, proteinPer100: 18 },
+    { id: "paprika", name: "Paprika", unit: "g", kcalPer100: 31, proteinPer100: 1 },
+    { id: "vinaigrette", name: "Vinaigrette", unit: "g", kcalPer100: 350, proteinPer100: 0.5 },
+    { id: "leinsamen", name: "Leinsamen", unit: "g", kcalPer100: 534, proteinPer100: 18 },
+  ];
+}
+
 export function seedNutrition() {
   return {
+    ingredients: ingredientsDB(),
+
     dishes: [
       // Frühstück
-      { id: "f1", mealType: "breakfast", name: "Porridge-Bowl", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 520, protein: 33, description: "Haferflocken 50 g, Sojamilch 200 ml, Skyr 150 g, Beeren 100 g, Chiasamen 10 g, Mandeln 10 g." }, extras: { erik: { addDescription: "+30 g Haferflocken, +20 g Erdnussbutter, +1 Banane", totalKcal: 810, totalProtein: 42 } } },
-      { id: "f2", mealType: "breakfast", name: "Tofu-Scramble mit Vollkornbrot", categories: ["deftig"], excludeTags: [], base: { kcal: 540, protein: 27, description: "Tofu 130 g mit Kurkuma/Paprika/Spinat angebraten, Olivenöl 5 g, 2 Scheiben Vollkornbrot, ¼ Avocado." }, extras: { erik: { addDescription: "+1 Ei, +1 Scheibe Brot, +30 g Käse", totalKcal: 810, totalProtein: 44 } } },
-      { id: "f3", mealType: "breakfast", name: "Overnight Oats mit Quark", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 480, protein: 31, description: "Haferflocken 50 g, Sojamilch 150 ml, Magerquark 150 g, Banane 100 g, Leinsamen 10 g, über Nacht einweichen." }, extras: { erik: { addDescription: "+30 g Haferflocken, +20 g Erdnussbutter, +100 g Beeren", totalKcal: 810, totalProtein: 40 } } },
-      { id: "f4", mealType: "breakfast", name: "Eiweiß-Pfannkuchen mit Quark", categories: ["deftig"], excludeTags: [], base: { kcal: 480, protein: 31, description: "Haferflocken 40 g + 2 Eier zu Pfannkuchen verarbeitet, dazu Magerquark 150 g, Beeren 100 g, 10 g Honig." }, extras: { erik: { addDescription: "+2 Eier, +30 g Haferflocken, +15 g Nussmus", totalKcal: 810, totalProtein: 45 } } },
-      { id: "f5", mealType: "breakfast", name: "Vollkorn-Toast mit Hüttenkäse & Tomaten", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 555, protein: 29, description: "2-3 Scheiben Vollkornbrot, Hüttenkäse 200 g, Kirschtomaten, Kresse/Basilikum, ¼ Avocado, Olivenöl 5 g." }, extras: { erik: { addDescription: "+1 Scheibe Brot, +100 g Hüttenkäse, +15 g Nüsse", totalKcal: 835, totalProtein: 44 } } },
-      { id: "f6", mealType: "breakfast", name: "Chia-Pudding mit Mango & Skyr", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 520, protein: 28, description: "Chiasamen 40 g, Kokosmilch light 200 ml, Mango 100 g, Kokosraspeln 10 g, Skyr 200 g separat untergerührt." }, extras: { erik: { addDescription: "+100 g Skyr, +30 g Haferflocken als Topping, +15 g Erdnussbutter", totalKcal: 820, totalProtein: 43 } } },
+      { id: "f1", mealType: "breakfast", name: "Porridge-Bowl", categories: ["leicht", "schnell"], excludeTags: [], base: { ingredients: [{ ingredientId: "haferflocken", amount: 50 }, { ingredientId: "sojamilch", amount: 200 }, { ingredientId: "skyr", amount: 150 }, { ingredientId: "beeren", amount: 100 }, { ingredientId: "chiasamen", amount: 10 }, { ingredientId: "mandeln", amount: 10 }] }, extras: { erik: { addIngredients: [{ ingredientId: "haferflocken", amount: 30 }, { ingredientId: "erdnussbutter", amount: 20 }, { ingredientId: "banane", amount: 120 }] } } },
+      { id: "f2", mealType: "breakfast", name: "Tofu-Scramble mit Vollkornbrot", categories: ["deftig"], excludeTags: [], base: { ingredients: [{ ingredientId: "tofu", amount: 130 }, { ingredientId: "olivenoel", amount: 5 }, { ingredientId: "vollkornbrot", amount: 80 }, { ingredientId: "avocado", amount: 50 }] }, extras: { erik: { addIngredients: [{ ingredientId: "ei", amount: 55 }, { ingredientId: "vollkornbrot", amount: 40 }, { ingredientId: "kaese", amount: 30 }] } } },
+      { id: "f3", mealType: "breakfast", name: "Overnight Oats mit Quark", categories: ["leicht", "schnell"], excludeTags: [], base: { ingredients: [{ ingredientId: "haferflocken", amount: 50 }, { ingredientId: "sojamilch", amount: 150 }, { ingredientId: "magerquark", amount: 150 }, { ingredientId: "banane", amount: 100 }, { ingredientId: "leinsamen", amount: 10 }] }, extras: { erik: { addIngredients: [{ ingredientId: "haferflocken", amount: 30 }, { ingredientId: "erdnussbutter", amount: 20 }, { ingredientId: "beeren", amount: 100 }] } } },
+      { id: "f4", mealType: "breakfast", name: "Eiweiß-Pfannkuchen mit Quark", categories: ["deftig"], excludeTags: [], base: { ingredients: [{ ingredientId: "haferflocken", amount: 40 }, { ingredientId: "ei", amount: 110 }, { ingredientId: "magerquark", amount: 150 }, { ingredientId: "beeren", amount: 100 }, { ingredientId: "honig", amount: 10 }] }, extras: { erik: { addIngredients: [{ ingredientId: "ei", amount: 110 }, { ingredientId: "haferflocken", amount: 30 }, { ingredientId: "nussmus", amount: 15 }] } } },
+      { id: "f5", mealType: "breakfast", name: "Vollkorn-Toast mit Hüttenkäse & Tomaten", categories: ["leicht", "schnell"], excludeTags: [], base: { ingredients: [{ ingredientId: "vollkornbrot", amount: 100 }, { ingredientId: "huettenkaese", amount: 200 }, { ingredientId: "kirschtomaten", amount: 50 }, { ingredientId: "kraeuter", amount: 5 }, { ingredientId: "avocado", amount: 50 }, { ingredientId: "olivenoel", amount: 5 }] }, extras: { erik: { addIngredients: [{ ingredientId: "vollkornbrot", amount: 40 }, { ingredientId: "huettenkaese", amount: 100 }, { ingredientId: "mandeln", amount: 15 }] } } },
+      { id: "f6", mealType: "breakfast", name: "Chia-Pudding mit Mango & Skyr", categories: ["leicht", "schnell"], excludeTags: [], base: { ingredients: [{ ingredientId: "chiasamen", amount: 40 }, { ingredientId: "kokosmilch_light", amount: 200 }, { ingredientId: "mango", amount: 100 }, { ingredientId: "kokosraspeln", amount: 10 }, { ingredientId: "skyr", amount: 200 }] }, extras: { erik: { addIngredients: [{ ingredientId: "skyr", amount: 100 }, { ingredientId: "haferflocken", amount: 30 }, { ingredientId: "erdnussbutter", amount: 15 }] } } },
 
       // Mittag
-      { id: "m1", mealType: "lunch", name: "Linsen-Dal mit Vollkornreis", categories: ["deftig"], excludeTags: [], base: { kcal: 780, protein: 31, description: "Rote Linsen (250 g gekocht), Kokosmilch light 100 ml, Gemüse, Vollkornreis 180 g gekocht, Öl 5 g, Topping: 50 g geröstete Kichererbsen." }, extras: { erik: { addDescription: "+100 g Reis, +100 g Linsen, +150 g Sojajoghurt", totalKcal: 1090, totalProtein: 53 } } },
-      { id: "m2", mealType: "lunch", name: "Kichererbsen-Bowl mit Feta", categories: ["leicht"], excludeTags: [], base: { kcal: 780, protein: 29, description: "Kichererbsen 180 g gekocht, Quinoa 120 g gekocht, geröstetes Gemüse (Süßkartoffel, Zucchini, Paprika) 200 g, Feta 40 g, Tahin-Dressing 15 g." }, extras: { erik: { addDescription: "+80 g Quinoa, +80 g Kichererbsen, +30 g Feta, +10 g Olivenöl", totalKcal: 1140, totalProtein: 44 } } },
-      { id: "m3", mealType: "lunch", name: "Vollkornpasta mit Linsen-Bolognese", categories: ["deftig"], excludeTags: [], base: { kcal: 730, protein: 31, description: "Vollkornpasta 100 g (roh), Linsen-Bolognese (150 g gekochte Linsen, Tomatensauce, Gemüse), Hefeflocken/Parmesan 15 g, Salat mit Olivenöl." }, extras: { erik: { addDescription: "+50 g Pasta, +100 g Linsen, +10 g Olivenöl", totalKcal: 1110, totalProtein: 47 } } },
-      { id: "m4", mealType: "lunch", name: "Falafel-Wrap mit Hummus", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 750, protein: 28, description: "6 Falafel, Vollkorn-Wrap/Fladenbrot 80 g, Hummus 50 g, reichlich Salat/Gemüse, Joghurt-Sauce 50 g." }, extras: { erik: { addDescription: "+2 Falafel, +ein weiterer Wrap, +30 g Hummus", totalKcal: 1100, totalProtein: 41 } } },
-      { id: "m5", mealType: "lunch", name: "Rote-Linsen-Suppe mit Vollkornbrot", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 755, protein: 36, description: "Rote Linsen 280 g gekocht als Suppe mit Gemüse und etwas Kokosmilch, Vollkornbrot 80 g, Olivenöl 5 g, Topping Kürbiskerne 15 g." }, extras: { erik: { addDescription: "+100 g Linsen, +40 g Brot, +15 g Kürbiskerne", totalKcal: 1055, totalProtein: 49 } } },
-      { id: "m6", mealType: "lunch", name: "Gebratener Tempeh mit Gemüse & Reisnudeln", categories: ["deftig"], excludeTags: [], base: { kcal: 695, protein: 38, description: "Tempeh 150 g gebraten, Reisnudeln 80 g (roh), Gemüsepfanne (Brokkoli, Karotten, Paprika), Erdnusssauce 20 g, Sesamöl 5 g." }, extras: { erik: { addDescription: "+50 g Tempeh, +30 g Reisnudeln, +15 g Erdnusssauce", totalKcal: 995, totalProtein: 53 } } },
+      { id: "m1", mealType: "lunch", name: "Linsen-Dal mit Vollkornreis", categories: ["deftig"], excludeTags: [], base: { ingredients: [{ ingredientId: "linsen_rot", amount: 250 }, { ingredientId: "kokosmilch_light", amount: 100 }, { ingredientId: "gemuese", amount: 150 }, { ingredientId: "vollkornreis", amount: 180 }, { ingredientId: "olivenoel", amount: 5 }, { ingredientId: "kichererbsen", amount: 50 }] }, extras: { erik: { addIngredients: [{ ingredientId: "vollkornreis", amount: 100 }, { ingredientId: "linsen_rot", amount: 100 }, { ingredientId: "sojajoghurt", amount: 150 }] } } },
+      { id: "m2", mealType: "lunch", name: "Kichererbsen-Bowl mit Feta", categories: ["leicht"], excludeTags: [], base: { ingredients: [{ ingredientId: "kichererbsen", amount: 180 }, { ingredientId: "quinoa", amount: 120 }, { ingredientId: "gemuese", amount: 200 }, { ingredientId: "feta", amount: 40 }, { ingredientId: "tahin", amount: 15 }] }, extras: { erik: { addIngredients: [{ ingredientId: "quinoa", amount: 80 }, { ingredientId: "kichererbsen", amount: 80 }, { ingredientId: "feta", amount: 30 }, { ingredientId: "olivenoel", amount: 10 }] } } },
+      { id: "m3", mealType: "lunch", name: "Vollkornpasta mit Linsen-Bolognese", categories: ["deftig"], excludeTags: [], base: { ingredients: [{ ingredientId: "vollkornpasta", amount: 100 }, { ingredientId: "linsen_rot", amount: 150 }, { ingredientId: "gemuese", amount: 150 }, { ingredientId: "hefeflocken", amount: 15 }, { ingredientId: "olivenoel", amount: 10 }] }, extras: { erik: { addIngredients: [{ ingredientId: "vollkornpasta", amount: 50 }, { ingredientId: "linsen_rot", amount: 100 }, { ingredientId: "olivenoel", amount: 10 }] } } },
+      { id: "m4", mealType: "lunch", name: "Falafel-Wrap mit Hummus", categories: ["leicht", "schnell"], excludeTags: [], base: { ingredients: [{ ingredientId: "falafel", amount: 120 }, { ingredientId: "fladenbrot", amount: 80 }, { ingredientId: "hummus", amount: 50 }, { ingredientId: "gemuese", amount: 100 }, { ingredientId: "sojajoghurt", amount: 50 }] }, extras: { erik: { addIngredients: [{ ingredientId: "falafel", amount: 40 }, { ingredientId: "fladenbrot", amount: 80 }, { ingredientId: "hummus", amount: 30 }] } } },
+      { id: "m5", mealType: "lunch", name: "Rote-Linsen-Suppe mit Vollkornbrot", categories: ["leicht", "schnell"], excludeTags: [], base: { ingredients: [{ ingredientId: "linsen_rot", amount: 280 }, { ingredientId: "gemuese", amount: 100 }, { ingredientId: "kokosmilch_light", amount: 50 }, { ingredientId: "vollkornbrot", amount: 80 }, { ingredientId: "olivenoel", amount: 5 }, { ingredientId: "kuerbiskerne", amount: 15 }] }, extras: { erik: { addIngredients: [{ ingredientId: "linsen_rot", amount: 100 }, { ingredientId: "vollkornbrot", amount: 40 }, { ingredientId: "kuerbiskerne", amount: 15 }] } } },
+      { id: "m6", mealType: "lunch", name: "Gebratener Tempeh mit Gemüse & Reisnudeln", categories: ["deftig"], excludeTags: [], base: { ingredients: [{ ingredientId: "tempeh", amount: 150 }, { ingredientId: "reisnudeln", amount: 80 }, { ingredientId: "gemuese", amount: 200 }, { ingredientId: "erdnusssauce", amount: 20 }, { ingredientId: "sesamoel", amount: 5 }] }, extras: { erik: { addIngredients: [{ ingredientId: "tempeh", amount: 50 }, { ingredientId: "reisnudeln", amount: 30 }, { ingredientId: "erdnusssauce", amount: 15 }] } } },
 
       // Abend
-      { id: "a1", mealType: "dinner", name: "Bohnen-Chili mit Vollkornbrot", categories: ["deftig"], excludeTags: [], base: { kcal: 650, protein: 35, description: "Gemischte Bohnen 200 g, texturiertes Sojaprotein 30 g (trocken), Tomatensauce/Gemüse, Mais, Vollkornbrot 40 g, geriebener Käse 20 g." }, extras: { erik: { addDescription: "+20 g Sojaprotein, +100 g Bohnen, +eine weitere Brotscheibe", totalKcal: 930, totalProtein: 50 } } },
-      { id: "a2", mealType: "dinner", name: "Tofu-Gemüse-Curry mit Reis", categories: ["deftig"], excludeTags: [], base: { kcal: 670, protein: 29, description: "Tofu 150 g, Kokosmilch 100 ml, Currypaste, Gemüse, Vollkornreis 150 g gekocht, Cashew-Topping 15 g." }, extras: { erik: { addDescription: "+50 g Tofu, +100 g Reis, +15 g Cashews", totalKcal: 1000, totalProtein: 42 } } },
-      { id: "a3", mealType: "dinner", name: "Gefüllte Paprika mit Quinoa & Käse überbacken", categories: ["deftig"], excludeTags: [], base: { kcal: 600, protein: 32, description: "2 Paprika, Füllung aus Quinoa 150 g gekocht + Linsen/Kichererbsen 150 g gekocht + Gemüse, mit 30 g Käse überbacken." }, extras: { erik: { addDescription: "+eine weitere Paprika/größere Portion Füllung, +20 g Käse, +Vollkornbrot 40 g als Beilage", totalKcal: 930, totalProtein: 45 } } },
-      { id: "a4", mealType: "dinner", name: "Shakshuka mit Fladenbrot", categories: ["schnell"], excludeTags: [], base: { kcal: 680, protein: 33, description: "2-3 Eier in Tomaten-Paprika-Sauce mit 100 g Kichererbsen, 30 g Feta, dazu 60 g Vollkorn-/Fladenbrot." }, extras: { erik: { addDescription: "+1 Ei, +weiteres Brot, +50 g Kichererbsen", totalKcal: 930, totalProtein: 45 } } },
-      { id: "a5", mealType: "dinner", name: "Große Salat-Bowl mit gebackenem Tofu", categories: ["leicht"], excludeTags: [], base: { kcal: 613, protein: 30, description: "Tofu 150 g gebacken, reichlich gemischter Salat (Blattsalat, Gurke, Tomate, Mais, Rotkohl), Vinaigrette 15 g, ¼ Avocado, Kürbiskerne 15 g, Vollkornbrot 40 g als Beilage." }, extras: { erik: { addDescription: "+50 g Tofu, +40 g Brot, +15 g Kürbiskerne", totalKcal: 913, totalProtein: 45 } } },
-      { id: "a6", mealType: "dinner", name: "Schnelle Kichererbsen-Pfanne mit Fladenbrot", categories: ["leicht", "schnell"], excludeTags: [], base: { kcal: 632, protein: 31, description: "Kichererbsen 280 g gekocht in Tomatensauce mit Paprika/Zwiebel/Kreuzkümmel, Fladenbrot/Vollkornbrot 60 g, Sojajoghurt-Dip 80 g, Olivenöl 5 g." }, extras: { erik: { addDescription: "+100 g Kichererbsen, +40 g Brot, +30 g Käse", totalKcal: 982, totalProtein: 48 } } },
+      { id: "a1", mealType: "dinner", name: "Bohnen-Chili mit Vollkornbrot", categories: ["deftig"], excludeTags: [], base: { ingredients: [{ ingredientId: "bohnen", amount: 200 }, { ingredientId: "sojaprotein", amount: 30 }, { ingredientId: "gemuese", amount: 150 }, { ingredientId: "mais", amount: 50 }, { ingredientId: "vollkornbrot", amount: 40 }, { ingredientId: "kaese", amount: 20 }] }, extras: { erik: { addIngredients: [{ ingredientId: "sojaprotein", amount: 20 }, { ingredientId: "bohnen", amount: 100 }, { ingredientId: "vollkornbrot", amount: 40 }] } } },
+      { id: "a2", mealType: "dinner", name: "Tofu-Gemüse-Curry mit Reis", categories: ["deftig"], excludeTags: [], base: { ingredients: [{ ingredientId: "tofu", amount: 150 }, { ingredientId: "kokosmilch", amount: 100 }, { ingredientId: "currypaste", amount: 15 }, { ingredientId: "gemuese", amount: 150 }, { ingredientId: "vollkornreis", amount: 150 }, { ingredientId: "cashewkerne", amount: 15 }] }, extras: { erik: { addIngredients: [{ ingredientId: "tofu", amount: 50 }, { ingredientId: "vollkornreis", amount: 100 }, { ingredientId: "cashewkerne", amount: 15 }] } } },
+      { id: "a3", mealType: "dinner", name: "Gefüllte Paprika mit Quinoa & Käse überbacken", categories: ["deftig"], excludeTags: [], base: { ingredients: [{ ingredientId: "paprika", amount: 240 }, { ingredientId: "quinoa", amount: 150 }, { ingredientId: "kichererbsen", amount: 150 }, { ingredientId: "gemuese", amount: 50 }, { ingredientId: "kaese", amount: 30 }] }, extras: { erik: { addIngredients: [{ ingredientId: "gemuese", amount: 150 }, { ingredientId: "kaese", amount: 20 }, { ingredientId: "vollkornbrot", amount: 40 }] } } },
+      { id: "a4", mealType: "dinner", name: "Shakshuka mit Fladenbrot", categories: ["schnell"], excludeTags: [], base: { ingredients: [{ ingredientId: "ei", amount: 140 }, { ingredientId: "gemuese", amount: 200 }, { ingredientId: "kichererbsen", amount: 100 }, { ingredientId: "feta", amount: 30 }, { ingredientId: "fladenbrot", amount: 60 }] }, extras: { erik: { addIngredients: [{ ingredientId: "ei", amount: 55 }, { ingredientId: "fladenbrot", amount: 40 }, { ingredientId: "kichererbsen", amount: 50 }] } } },
+      { id: "a5", mealType: "dinner", name: "Große Salat-Bowl mit gebackenem Tofu", categories: ["leicht"], excludeTags: [], base: { ingredients: [{ ingredientId: "tofu", amount: 150 }, { ingredientId: "gemuese", amount: 200 }, { ingredientId: "vinaigrette", amount: 15 }, { ingredientId: "avocado", amount: 50 }, { ingredientId: "kuerbiskerne", amount: 15 }, { ingredientId: "vollkornbrot", amount: 40 }] }, extras: { erik: { addIngredients: [{ ingredientId: "tofu", amount: 50 }, { ingredientId: "vollkornbrot", amount: 40 }, { ingredientId: "kuerbiskerne", amount: 15 }] } } },
+      { id: "a6", mealType: "dinner", name: "Schnelle Kichererbsen-Pfanne mit Fladenbrot", categories: ["leicht", "schnell"], excludeTags: [], base: { ingredients: [{ ingredientId: "kichererbsen", amount: 280 }, { ingredientId: "gemuese", amount: 150 }, { ingredientId: "fladenbrot", amount: 60 }, { ingredientId: "sojajoghurt", amount: 80 }, { ingredientId: "olivenoel", amount: 5 }] }, extras: { erik: { addIngredients: [{ ingredientId: "kichererbsen", amount: 100 }, { ingredientId: "fladenbrot", amount: 40 }, { ingredientId: "kaese", amount: 30 }] } } },
     ],
 
-    // Referenzwerte aus dem Ernährungsplan-Dokument, nur zur Anzeige (kein Tages-Tracking/Abgleich in Phase 2).
+    // Referenzwerte aus dem Ernährungsplan-Dokument, nur zur Anzeige (kein automatischer Soll/Ist-Abgleich der Vorschläge).
     targets: {
       erik: {
         dailyKcal: 3300, dailyProtein: 160, dailyCarbs: 440, dailyFat: 100,

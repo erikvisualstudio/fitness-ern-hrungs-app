@@ -145,9 +145,27 @@ Deftig, 1x Leicht, wenn möglich zusätzlich 1x Schnell.
   ergänzen — bestehende Nutzer bekommen neue Gerichte automatisch beim
   nächsten Laden nachgetragen, solange sich die IDs bestehender Gerichte
   nicht ändern (siehe `migrate()` in `js/db.js`).
-- **Kein Tages-Kalorien-Tracking:** die Kalorien-/Proteinwerte pro Mahlzeit
-  werden nur angezeigt, nicht zu einer Tagesbilanz aufsummiert oder gegen ein
-  Ziel geprüft — bewusst schlank gehalten (siehe Konzept-Dokument).
+- **Zutaten-basiert, nicht fixe Gesamtwerte:** jedes Gericht referenziert eine
+  gemeinsame Zutaten-Datenbank (kcal/Protein pro 100 g bzw. 100 ml,
+  `state.nutrition.ingredients`). kcal/Protein pro Portion werden daraus live
+  berechnet, nicht als fixe Zahl gepflegt.
+- **Anpassungen pro Person und Mahlzeit** (Abschnitt "Tatsächlich gegessen"):
+  Mengen ändern, Zutaten ersetzen oder komplett freie Einträge (z. B. "150 g
+  Sojahack, 170 kcal/100g, 20 g P/100g") erfassen — mit Live-Neuberechnung.
+  Zwei Speicher-Modi:
+  - **"Nur heute übernehmen"** — gilt nur für den gewählten Tag, das Rezept im
+    Pool bleibt unverändert (für einmalige Abweichungen wie "nur 60 g statt
+    80 g Haferflocken geschafft" oder "Sojajoghurt statt Skyr, weil das zuhause
+    war").
+  - **"Dauerhaft im Rezept ändern"** — schreibt die Änderung ins Rezept
+    zurück (bei Erik als Delta zur Basis-Portion, bei Nele direkt in die
+    Basis — wirkt sich dann auch auf Eriks Portion aus, da seine Portion =
+    Basis + Delta).
+  - Eine Tagesbilanz ("Bisher heute") oben auf der Seite zeigt Ist vs. Ziel
+    (kcal/Protein) über die 3 Hauptmahlzeiten, damit ein Defizit/Überschuss
+    bei einer Mahlzeit bewusst bei der nächsten ausgeglichen werden kann —
+    die App passt Vorschläge dafür nicht automatisch an, das bleibt eine
+    bewusste Entscheidung.
 
 ## Daten sichern / übertragen
 

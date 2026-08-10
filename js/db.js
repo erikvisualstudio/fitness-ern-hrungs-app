@@ -51,8 +51,21 @@ function migrate(state) {
     changed = true;
   } else {
     const seeded = seedNutrition();
-    if (!Array.isArray(state.nutrition.dishes) || state.nutrition.dishes.length === 0) {
+    // Alte Gerichte-Struktur (fixe base.kcal/protein + Textbeschreibung) durch die
+    // Zutaten-basierte Struktur ersetzen. Noch niemand konnte Gerichte im alten
+    // Format bearbeiten (Feature gab es nicht) — ein Wholesale-Ersatz ist also
+    // verlustfrei, nur bereits geloggte Tageswahlen (choice: dishId) bleiben über
+    // die unveränderten IDs (f1..f6/m1..m6/a1..a6) gültig.
+    const hasStructuredDishes =
+      Array.isArray(state.nutrition.dishes) &&
+      state.nutrition.dishes.length > 0 &&
+      state.nutrition.dishes.every((d) => d.base && Array.isArray(d.base.ingredients));
+    if (!hasStructuredDishes) {
       state.nutrition.dishes = seeded.dishes;
+      changed = true;
+    }
+    if (!Array.isArray(state.nutrition.ingredients) || state.nutrition.ingredients.length === 0) {
+      state.nutrition.ingredients = seeded.ingredients;
       changed = true;
     }
     if (!state.nutrition.targets) {
@@ -66,6 +79,16 @@ function migrate(state) {
     if (!state.nutrition.days) {
       state.nutrition.days = {};
       changed = true;
+    } else {
+      // Ältere Tagespläne haben noch kein "actual"-Feld pro Slot.
+      Object.values(state.nutrition.days).forEach((day) => {
+        Object.values(day).forEach((slot) => {
+          if (slot && !slot.actual) {
+            slot.actual = { erik: null, nele: null };
+            changed = true;
+          }
+        });
+      });
     }
   }
 
@@ -199,6 +222,23 @@ export const db = {
 
   getDish(dishId) {
     return state.nutrition.dishes.find((d) => d.id === dishId) || null;
+  },
+
+  getIngredients() {
+    return state.nutrition.ingredients;
+  },
+
+  getIngredient(ingredientId) {
+    return state.nutrition.ingredients.find((i) => i.id === ingredientId) || null;
+  },
+
+  // Legt eine neue Zutat an (z. B. beim freien Eintrag "Sojahack"), falls sie
+  // noch nicht existiert — danach in der gemeinsamen Datenbank für alle Gerichte
+  // und weitere freie Einträge wiederverwendbar.
+  addIngredient({ id, name, unit, kcalPer100, proteinPer100 }) {
+    if (this.getIngredient(id)) return;
+    state.nutrition.ingredients.push({ id, name, unit, kcalPer100, proteinPer100 });
+    save(state);
   },
 
   getNutritionTargets(userId) {
