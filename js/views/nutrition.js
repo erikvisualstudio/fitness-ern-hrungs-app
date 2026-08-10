@@ -308,18 +308,14 @@ function adjustPanelHtml(panelId, personId, mealType, dishId, prefillName, prefi
       <div class="meta" data-preview style="margin: 8px 0;"></div>
       <label>Notiz (optional)</label>
       <input type="text" data-note placeholder="z. B. Sojajoghurt statt Skyr, oder 60g statt 80g Haferflocken" style="margin-bottom:10px;" />
-      ${
-        !dishId
-          ? `<label>Kategorie (nur für "Als Rezept speichern")</label>
+      <label>Kategorie (nur für "Als neues Rezept speichern")</label>
       <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:10px;">
         ${CATEGORIES.map((c) => `<label style="display:flex; align-items:center; gap:5px; font-weight:400; font-size:0.85rem;"><input type="checkbox" data-cat="${c}" /> ${CATEGORY_LABELS[c]}</label>`).join("")}
-      </div>`
-          : ""
-      }
+      </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button type="button" class="btn btn-sm" data-save-temp data-person="${personId}" data-meal="${mealType}" data-dish="${dishId || ""}">Nur heute übernehmen</button>
-        ${dishId ? `<button type="button" class="btn btn-sm btn-secondary" data-save-permanent data-person="${personId}" data-meal="${mealType}" data-dish="${dishId}">Dauerhaft im Rezept ändern</button>` : ""}
-        ${!dishId ? `<button type="button" class="btn btn-sm btn-secondary" data-save-recipe data-person="${personId}" data-meal="${mealType}">Als neues Rezept speichern</button>` : ""}
+        ${dishId ? `<button type="button" class="btn btn-sm btn-secondary" data-save-permanent data-person="${personId}" data-meal="${mealType}" data-dish="${dishId}">Dauerhaft in diesem Rezept ändern</button>` : ""}
+        <button type="button" class="btn btn-sm btn-secondary" data-save-recipe data-person="${personId}" data-meal="${mealType}">Als neues Rezept speichern</button>
         <button type="button" class="link-btn" data-cancel-adjust>Abbrechen</button>
       </div>
     </div>
