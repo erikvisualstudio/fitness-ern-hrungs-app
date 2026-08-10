@@ -80,11 +80,32 @@ function migrate(state) {
       state.nutrition.days = {};
       changed = true;
     } else {
-      // Ältere Tagespläne haben noch kein "actual"-Feld pro Slot.
+      // Ältere Tagespläne haben noch kein "actual"-Feld pro Slot, und "choice"
+      // war früher je nach Modus mal unter "shared", mal unter "erik"/"nele"
+      // abgelegt — das führte dazu, dass ein Moduswechsel (gemeinsam↔getrennt)
+      // die bereits getroffene Wahl gelöscht hat. choice ist jetzt IMMER pro
+      // Person gespeichert (siehe nutrition.js), unabhängig vom Modus.
       Object.values(state.nutrition.days).forEach((day) => {
         Object.values(day).forEach((slot) => {
-          if (slot && !slot.actual) {
+          if (!slot) return;
+          if (!slot.actual) {
             slot.actual = { erik: null, nele: null };
+            changed = true;
+          }
+          if (!slot.choice) slot.choice = {};
+          if (Object.prototype.hasOwnProperty.call(slot.choice, "shared")) {
+            const sharedDish = slot.choice.shared;
+            if (!slot.choice.erik) slot.choice.erik = sharedDish;
+            if (!slot.choice.nele) slot.choice.nele = sharedDish;
+            delete slot.choice.shared;
+            changed = true;
+          }
+          if (slot.choice.erik === undefined) {
+            slot.choice.erik = null;
+            changed = true;
+          }
+          if (slot.choice.nele === undefined) {
+            slot.choice.nele = null;
             changed = true;
           }
         });

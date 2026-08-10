@@ -71,10 +71,8 @@ function getRecentDishIds(nutrition, party, mealType, beforeDateISO) {
   const result = [];
   for (const date of dates) {
     const slot = nutrition.days[date] && nutrition.days[date][mealType];
-    if (!slot) continue;
-    if (slot.mode === "gemeinsam") {
-      if (slot.choice.shared) result.push(slot.choice.shared);
-    } else if (party === "shared") {
+    if (!slot || !slot.choice) continue;
+    if (party === "shared") {
       if (slot.choice.erik) result.push(slot.choice.erik);
       if (slot.choice.nele) result.push(slot.choice.nele);
     } else if (slot.choice[party]) {
@@ -150,24 +148,27 @@ export function ensureDayPlan(nutrition, dateISO) {
         mode: DEFAULT_MODE[mealType],
         rerollSeed: {},
         proposals: {},
-        choice: {},
+        choice: { erik: null, nele: null },
         actual: { erik: null, nele: null },
       };
     }
     if (!day[mealType].actual) day[mealType].actual = { erik: null, nele: null };
+    if (!day[mealType].choice) day[mealType].choice = { erik: null, nele: null };
     ensureProposals(nutrition, dateISO, mealType);
   });
   return day;
 }
 
+// Modus-Wechsel ändert NUR, wie viele Vorschlags-Spalten angezeigt werden
+// (eine gemeinsame vs. zwei getrennte) — wer welches Gericht tatsächlich
+// gewählt hat (slot.choice, immer pro Person) bleibt dabei erhalten. Nur die
+// Vorschlagslisten für den neuen Modus werden neu generiert, falls sie noch
+// nicht existieren.
 export function setSlotMode(nutrition, dateISO, mealType, mode) {
   ensureDayPlan(nutrition, dateISO);
   const slot = nutrition.days[dateISO][mealType];
   if (slot.mode === mode) return;
   slot.mode = mode;
-  slot.rerollSeed = {};
-  slot.proposals = {};
-  slot.choice = {};
   ensureProposals(nutrition, dateISO, mealType);
 }
 
@@ -175,12 +176,32 @@ export function rerollSlot(nutrition, dateISO, mealType, party) {
   const slot = nutrition.days[dateISO][mealType];
   slot.rerollSeed[party] = (slot.rerollSeed[party] || 0) + 1;
   slot.proposals[party] = computeProposal(nutrition, dateISO, mealType, party, slot.rerollSeed[party]);
-  slot.choice[party] = null;
+  if (party === "shared") {
+    slot.choice.erik = null;
+    slot.choice.nele = null;
+  } else {
+    slot.choice[party] = null;
+  }
 }
 
+// party ist "shared" (Modus gemeinsam, setzt beide Personen gleichzeitig auf
+// dasselbe Gericht) oder eine konkrete Person (Modus getrennt). slot.choice
+// selbst ist immer pro echter Person gespeichert, damit ein Moduswechsel
+// nichts verwirft (siehe setSlotMode).
 export function setChoice(nutrition, dateISO, mealType, party, dishId) {
   const slot = nutrition.days[dateISO][mealType];
-  slot.choice[party] = slot.choice[party] === dishId ? null : dishId;
+  if (party === "shared") {
+    const alreadySelected = slot.choice.erik === dishId && slot.choice.nele === dishId;
+    slot.choice.erik = alreadySelected ? null : dishId;
+    slot.choice.nele = alreadySelected ? null : dishId;
+  } else {
+    slot.choice[party] = slot.choice[party] === dishId ? null : dishId;
+  }
+}
+
+export function isSelected(slot, party, dishId) {
+  if (party === "shared") return slot.choice.erik === dishId && slot.choice.nele === dishId;
+  return slot.choice[party] === dishId;
 }
 
 // --- Zutaten / Makro-Berechnung ---
@@ -271,9 +292,34 @@ export function applyPermanentEdit(nutrition, dishId, userId, newIngredients) {
 
 export function getResolvedChoice(nutrition, dateISO, mealType, personId) {
   const slot = nutrition.days[dateISO] && nutrition.days[dateISO][mealType];
-  if (!slot) return null;
-  if (slot.mode === "gemeinsam") return slot.choice.shared || null;
+  if (!slot || !slot.choice) return null;
   return slot.choice[personId] || null;
+}
+
+// Setzt die Wahl einer Person direkt, ohne Toggle-Semantik (z. B. nachdem ein
+// neuer Eintrag als Rezept gespeichert wurde und sofort als heutige Wahl gilt).
+export function assignChoice(nutrition, dateISO, mealType, personId, dishId) {
+  const slot = nutrition.days[dateISO][mealType];
+  slot.choice[personId] = dishId;
+}
+
+function slugify(str) {
+  return str
+    .toLowerCase()
+    .replace(/[äöüß]/g, (c) => ({ ä: "ae", ö: "oe", ü: "ue", ß: "ss" }[c]))
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+// Legt aus einem freien Eintrag ein dauerhaftes, wiederverwendbares Gericht im
+// Pool an (statt nur einer einmaligen Tages-Notiz). Keine Erik-Zusatz-Portion
+// beim Anlegen — kann später ganz normal über "Anpassen → Dauerhaft ändern"
+// ergänzt werden.
+export function addNewDish(nutrition, mealType, name, categories, ingredients) {
+  const id = `custom_${slugify(name)}_${Math.random().toString(36).slice(2, 6)}`;
+  const dish = { id, mealType, name, categories, excludeTags: [], base: { ingredients }, extras: {} };
+  nutrition.dishes.push(dish);
+  return id;
 }
 
 export function setOverride(nutrition, dateISO, mealType, personId, ingredients, note) {

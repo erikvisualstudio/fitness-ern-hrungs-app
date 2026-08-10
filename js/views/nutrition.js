@@ -17,6 +17,10 @@ import {
   clearActual,
   applyPermanentEdit,
   computeMacros,
+  isSelected,
+  addNewDish,
+  assignChoice,
+  CATEGORIES,
 } from "../nutrition.js";
 import { escapeHtml, fmtNum } from "../util.js";
 
@@ -193,6 +197,31 @@ function wireEvents(root, ctx, nutritionState, ingredientsDB) {
         render(root, ctx);
       });
     }
+
+    const saveRecipe = panel.querySelector("[data-save-recipe]");
+    if (saveRecipe) {
+      saveRecipe.addEventListener("click", () => {
+        const { person: personId, meal: mealType } = saveRecipe.dataset;
+        const { ingredients, newlyAdded } = readIngredientRows(panel);
+        if (ingredients.length === 0) return;
+        const name = panel.querySelector("[data-name]").value.trim();
+        if (!name) {
+          alert('Bitte einen Namen für das Rezept eingeben.');
+          return;
+        }
+        const categories = [...panel.querySelectorAll("[data-cat]:checked")].map((cb) => cb.dataset.cat);
+        if (categories.length === 0) {
+          alert("Bitte mindestens eine Kategorie wählen (Deftig/Leicht/Schnell).");
+          return;
+        }
+        newlyAdded.forEach((ing) => db.addIngredient(ing));
+        const newDishId = addNewDish(nutritionState, mealType, name, categories, ingredients);
+        assignChoice(nutritionState, selectedDate, mealType, personId, newDishId);
+        clearActual(nutritionState, selectedDate, mealType, personId);
+        db.saveNutritionState();
+        render(root, ctx);
+      });
+    }
   });
 }
 
@@ -279,9 +308,18 @@ function adjustPanelHtml(panelId, personId, mealType, dishId, prefillName, prefi
       <div class="meta" data-preview style="margin: 8px 0;"></div>
       <label>Notiz (optional)</label>
       <input type="text" data-note placeholder="z. B. Sojajoghurt statt Skyr, oder 60g statt 80g Haferflocken" style="margin-bottom:10px;" />
+      ${
+        !dishId
+          ? `<label>Kategorie (nur für "Als Rezept speichern")</label>
+      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:10px;">
+        ${CATEGORIES.map((c) => `<label style="display:flex; align-items:center; gap:5px; font-weight:400; font-size:0.85rem;"><input type="checkbox" data-cat="${c}" /> ${CATEGORY_LABELS[c]}</label>`).join("")}
+      </div>`
+          : ""
+      }
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button type="button" class="btn btn-sm" data-save-temp data-person="${personId}" data-meal="${mealType}" data-dish="${dishId || ""}">Nur heute übernehmen</button>
         ${dishId ? `<button type="button" class="btn btn-sm btn-secondary" data-save-permanent data-person="${personId}" data-meal="${mealType}" data-dish="${dishId}">Dauerhaft im Rezept ändern</button>` : ""}
+        ${!dishId ? `<button type="button" class="btn btn-sm btn-secondary" data-save-recipe data-person="${personId}" data-meal="${mealType}">Als neues Rezept speichern</button>` : ""}
         <button type="button" class="link-btn" data-cancel-adjust>Abbrechen</button>
       </div>
     </div>
@@ -335,7 +373,7 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
       dishIds.forEach((dishId) => {
         const dish = db.getDish(dishId);
         if (!dish) return;
-        grid.appendChild(buildDishCard(dish, party, mealType, slot.choice[party] === dishId, ingredientsDB));
+        grid.appendChild(buildDishCard(dish, party, mealType, isSelected(slot, party, dishId), ingredientsDB));
       });
       section.appendChild(grid);
     }
