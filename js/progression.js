@@ -11,8 +11,8 @@
 //    oberen Ende geschafft -> Gewicht um festen Schritt erhöhen (harte Obergrenze
 //    respektieren), sonst gleiches Gewicht mit Ziel "1-2 Wdh. mehr als letztes Mal".
 //  - band: gleiche Logik wie weighted, aber statt eines kg-Werts wird eine
-//    Bandstufe (leicht/mittel/schwer) vorgeschlagen; ist "schwer" schon erreicht,
-//    wandert der Zielbereich weiter nach oben.
+//    Bandstufe (leicht/mittel/schwer/sehr schwer) vorgeschlagen; ist die
+//    höchste Stufe schon erreicht, wandert der Zielbereich weiter nach oben.
 //  - bodyweight: Ziel ist das Gesamtvolumen (Wdh. oder Sekunden) über alle Sätze.
 //    Wird das Volumen der letzten Session erreicht/übertroffen -> neues Ziel
 //    = letztes Volumen + fester Schritt. Wird das Ziel mehrfach stabil (3x in
@@ -24,7 +24,7 @@
 // unabhängig von der individuellen Progression auf reduziertes Volumen/Gewicht
 // heruntergesetzt (fixe Deload-Regel laut Konzept).
 
-const BAND_LEVELS = ["leicht", "mittel", "schwer"];
+export const BAND_LEVELS = ["leicht", "mittel", "schwer", "sehr schwer"];
 
 export function getBlockWeek(blockStartISO, todayISOStr) {
   const start = new Date(`${blockStartISO}T00:00:00`);

@@ -1,5 +1,5 @@
 import { db, todayISO } from "../db.js";
-import { getBlockWeek } from "../progression.js";
+import { getBlockWeek, BAND_LEVELS } from "../progression.js";
 import { escapeHtml, showToast } from "../util.js";
 
 export function mount(root, { navigate }) {
@@ -212,7 +212,7 @@ function editFields(ex) {
       <div class="field-row">
         <div><label>Band-Stufe</label>
           <select data-f="bandLevel">
-            ${["leicht", "mittel", "schwer"].map((l) => `<option value="${l}" ${l === ex.bandLevel ? "selected" : ""}>${l}</option>`).join("")}
+            ${BAND_LEVELS.map((l) => `<option value="${l}" ${l === ex.bandLevel ? "selected" : ""}>${l}</option>`).join("")}
           </select>
         </div>
       </div>

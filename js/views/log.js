@@ -1,8 +1,7 @@
 import { db, uid, todayISO } from "../db.js";
-import { getBlockWeek, isDeloadWeek, getSuggestion } from "../progression.js";
+import { getBlockWeek, isDeloadWeek, getSuggestion, BAND_LEVELS } from "../progression.js";
 import { escapeHtml, fmtNum, showToast } from "../util.js";
 
-const BAND_LEVELS = ["leicht", "mittel", "schwer"];
 const PACE_OPTIONS = ["locker", "moderat", "zügig"];
 
 export function mount(root, { navigate, params }) {
