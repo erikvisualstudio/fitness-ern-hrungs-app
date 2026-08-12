@@ -63,6 +63,16 @@ function migrate(state) {
     if (!hasStructuredDishes) {
       state.nutrition.dishes = seeded.dishes;
       changed = true;
+    } else {
+      // Der Gerichte-Pool wächst mit der Zeit (siehe seed-data.js) — fehlende
+      // Seed-Gerichte werden per ID nachgetragen, bereits existierende (ggf.
+      // vom Nutzer dauerhaft angepasste) Gerichte bleiben unangetastet.
+      const existingDishIds = new Set(state.nutrition.dishes.map((d) => d.id));
+      const missingDishes = seeded.dishes.filter((d) => !existingDishIds.has(d.id));
+      if (missingDishes.length > 0) {
+        state.nutrition.dishes.push(...missingDishes);
+        changed = true;
+      }
     }
     // Zutaten-Datenbank wächst mit der Zeit (siehe seed-data.js) — fehlende
     // Seed-Zutaten werden per ID nachgetragen statt die Liste zu ersetzen,
