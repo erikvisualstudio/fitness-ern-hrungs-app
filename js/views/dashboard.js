@@ -19,8 +19,8 @@ export function mount(root, { navigate }) {
 
     <div class="card" style="display:flex; align-items:center; justify-content:space-between;">
       <div>
-        <div style="font-size:0.78rem; color:var(--text-dim); font-weight:600; text-transform:uppercase;">Trainingsblock</div>
-        <div style="font-size:1.3rem; font-weight:700;">Woche ${weekInBlock} / 4</div>
+        <div class="stat-label">Trainingsblock</div>
+        <div class="stat-value">Woche ${weekInBlock}<span style="color:var(--text-dim); font-weight:700;"> / 4</span></div>
       </div>
       ${deload ? `<span class="badge badge-warn">Deload-Woche</span>` : `<span class="badge">Aufbauwoche</span>`}
     </div>

@@ -62,22 +62,27 @@ function render(root, ctx) {
     </div>
 
     <div class="card" style="margin-bottom:16px;">
-      <div class="section-title" style="margin-top:0;">Bisher heute (Hauptmahlzeiten)</div>
+      <div class="stat-label">Bisher heute (Hauptmahlzeiten)</div>
       ${users
-        .map((u) => {
+        .map((u, i) => {
           const actual = sumDailyActual(nutritionState, ingredientsDB, selectedDate, u.id);
           const target = db.getNutritionTargets(u.id);
           const mealTarget = MEAL_TYPES.reduce(
             (acc, mt) => ({ kcal: acc.kcal + target.meals[mt].kcal, protein: acc.protein + target.meals[mt].protein }),
             { kcal: 0, protein: 0 }
           );
-          return `<div class="row-between" style="margin-bottom:4px;">
-            <span>${escapeHtml(u.name)}</span>
-            <span>${fmtNum(actual.kcal)} / ${fmtNum(mealTarget.kcal)} kcal · ${fmtNum(actual.protein)} / ${fmtNum(mealTarget.protein)} g P</span>
+          return `<div class="row-between" style="align-items:baseline; margin-top:${i === 0 ? "10px" : "12px"};">
+            <div>
+              <div style="font-weight:700; font-size:0.9rem;">${escapeHtml(u.name)}</div>
+              <div class="meta" style="font-size:0.76rem; margin-top:1px;">${fmtNum(actual.protein)} / ${fmtNum(mealTarget.protein)} g Protein</div>
+            </div>
+            <div style="text-align:right;">
+              <span class="stat-value" style="font-size:1.5rem;">${fmtNum(actual.kcal)}</span><span class="meta" style="font-size:0.78rem;"> / ${fmtNum(mealTarget.kcal)} kcal</span>
+            </div>
           </div>`;
         })
         .join("")}
-      <p class="meta" style="margin: 6px 0 0;">Nur die 3 Hauptmahlzeiten, Snacks/Rest-Budget nicht mitgerechnet.</p>
+      <p class="meta" style="margin: 12px 0 0;">Nur die 3 Hauptmahlzeiten, Snacks/Rest-Budget nicht mitgerechnet.</p>
     </div>
 
     <div id="slots"></div>
@@ -378,8 +383,8 @@ function adjustPanelHtml(panelId, personId, mealType, dishId, prefillName, prefi
       <label>Notiz (optional)</label>
       <input type="text" data-note placeholder="z. B. Sojajoghurt statt Skyr, oder 60g statt 80g Haferflocken" style="margin-bottom:10px;" />
       <label>Kategorie (nur für "Als neues Rezept speichern")</label>
-      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:10px;">
-        ${CATEGORIES.map((c) => `<label style="display:flex; align-items:center; gap:5px; font-weight:400; font-size:0.85rem;"><input type="checkbox" data-cat="${c}" /> ${CATEGORY_LABELS[c]}</label>`).join("")}
+      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:10px;">
+        ${CATEGORIES.map((c) => `<label class="category-check"><input type="checkbox" data-cat="${c}" /><span>${CATEGORY_LABELS[c]}</span></label>`).join("")}
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button type="button" class="btn btn-sm" data-save-temp data-person="${personId}" data-meal="${mealType}" data-dish="${dishId || ""}">Nur heute übernehmen</button>
