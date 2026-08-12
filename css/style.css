@@ -471,10 +471,39 @@ textarea {
   margin-bottom: 8px;
   flex-wrap: wrap;
 }
-.ingredient-row select {
+.ing-search-wrap {
+  position: relative;
   flex: 2;
   min-width: 140px;
 }
+.ing-results {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 30;
+}
+.ing-result-item {
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.ing-result-item:last-child { border-bottom: none; }
+.ing-result-item:hover { background: var(--accent-dim); }
+.ing-result-item .meta { font-size: 0.72rem; flex-shrink: 0; }
+.ing-result-new { color: var(--accent); font-weight: 600; }
 .ingredient-row input[type="number"] {
   flex: 1;
   min-width: 70px;

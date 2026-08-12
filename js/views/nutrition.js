@@ -225,15 +225,86 @@ function wireEvents(root, ctx, nutritionState, ingredientsDB) {
   });
 }
 
+// Zutaten-Suche: Freitext statt <select>, weil die Datenbank auf ~250+
+// Zutaten gewachsen ist — eine lange Dropdown-Liste wäre auf dem Handy kaum
+// noch bedienbar. Tippen filtert per Teilstring-Suche (umlaut-normalisiert),
+// Klick auf ein Ergebnis übernimmt die Zutat; ein eigener Listeneintrag
+// "+ Neue Zutat anlegen" springt in den manuellen kcal/Protein-Modus.
+function normalizeSearch(str) {
+  return str
+    .toLowerCase()
+    .replace(/[äöüß]/g, (c) => ({ ä: "ae", ö: "oe", ü: "ue", ß: "ss" }[c] || c));
+}
+
+function hideResults(row) {
+  const resultsEl = row.querySelector("[data-ing-results]");
+  resultsEl.style.display = "none";
+  resultsEl.innerHTML = "";
+}
+
+function renderIngredientResults(row, ingredientsDB, query) {
+  const resultsEl = row.querySelector("[data-ing-results]");
+  const q = normalizeSearch(query.trim());
+  if (q.length === 0) {
+    hideResults(row);
+    return;
+  }
+  const matches = ingredientsDB.filter((i) => normalizeSearch(i.name).includes(q)).slice(0, 20);
+  const itemsHtml = matches
+    .map(
+      (i) =>
+        `<div class="ing-result-item" data-ing-option="${i.id}">${escapeHtml(i.name)}${i.category ? `<span class="meta">${escapeHtml(i.category)}</span>` : ""}</div>`
+    )
+    .join("");
+  const newHtml = `<div class="ing-result-item ing-result-new" data-ing-new>+ Neue Zutat „${escapeHtml(query.trim())}" anlegen</div>`;
+  resultsEl.innerHTML = itemsHtml + newHtml;
+  resultsEl.style.display = "block";
+}
+
+function selectIngredientForRow(row, ingredientId, ingredientsDB) {
+  const ing = ingredientsDB.find((i) => i.id === ingredientId);
+  row.querySelector("[data-ing-search]").value = ing ? ing.name : "";
+  row.querySelector("[data-ing-id]").value = ingredientId;
+  row.querySelector("[data-new-fields]").style.display = "none";
+  hideResults(row);
+}
+
+function startNewIngredientForRow(row, query) {
+  row.querySelector("[data-ing-id]").value = "";
+  row.querySelector("[data-new-fields]").style.display = "flex";
+  row.querySelector("[data-new-name]").value = query.trim();
+  hideResults(row);
+}
+
 function bindPanelRowEvents(panel, ingredientsDB) {
   panel.querySelectorAll("[data-row]").forEach((row) => {
-    const select = row.querySelector("[data-ing]");
-    const newFields = row.querySelector("[data-new-fields]");
-    newFields.style.display = select.value === "__new__" ? "flex" : "none";
-    select.onchange = () => {
-      newFields.style.display = select.value === "__new__" ? "flex" : "none";
-      updatePreview(panel, ingredientsDB);
+    const searchInput = row.querySelector("[data-ing-search]");
+    const idInput = row.querySelector("[data-ing-id]");
+    const resultsEl = row.querySelector("[data-ing-results]");
+
+    searchInput.oninput = () => {
+      idInput.value = "";
+      renderIngredientResults(row, ingredientsDB, searchInput.value);
     };
+    searchInput.onfocus = () => {
+      if (searchInput.value.trim()) renderIngredientResults(row, ingredientsDB, searchInput.value);
+    };
+    searchInput.onblur = () => {
+      setTimeout(() => hideResults(row), 150);
+    };
+
+    resultsEl.onclick = (e) => {
+      const optionEl = e.target.closest("[data-ing-option]");
+      if (optionEl) {
+        selectIngredientForRow(row, optionEl.dataset.ingOption, ingredientsDB);
+        updatePreview(panel, ingredientsDB);
+        return;
+      }
+      if (e.target.closest("[data-ing-new]")) {
+        startNewIngredientForRow(row, searchInput.value);
+      }
+    };
+
     const rmBtn = row.querySelector(".rm");
     rmBtn.onclick = () => {
       row.remove();
@@ -247,10 +318,10 @@ function readIngredientRows(panel) {
   const ingredients = [];
   const newlyAdded = [];
   rows.forEach((row) => {
-    const select = row.querySelector("[data-ing]");
     const amount = parseFloat(row.querySelector("[data-amt]").value);
     if (Number.isNaN(amount) || amount <= 0) return;
-    if (select.value === "__new__") {
+    const ingId = row.querySelector("[data-ing-id]").value;
+    if (!ingId) {
       const name = row.querySelector("[data-new-name]").value.trim();
       const kcalPer100 = parseFloat(row.querySelector("[data-new-kcal]").value);
       const proteinPer100 = parseFloat(row.querySelector("[data-new-protein]").value);
@@ -259,7 +330,7 @@ function readIngredientRows(panel) {
       newlyAdded.push({ id, name, unit: "g", kcalPer100, proteinPer100 });
       ingredients.push({ ingredientId: id, amount });
     } else {
-      ingredients.push({ ingredientId: select.value, amount });
+      ingredients.push({ ingredientId: ingId, amount });
     }
   });
   return { ingredients, newlyAdded };
@@ -273,17 +344,15 @@ function updatePreview(panel, ingredientsDB) {
   if (preview) preview.textContent = `Vorschau: ${fmtNum(macros.kcal)} kcal · ${fmtNum(macros.protein)} g P`;
 }
 
-function ingredientOptions(ingredientsDB, selectedId) {
-  const opts = ingredientsDB
-    .map((i) => `<option value="${i.id}" ${i.id === selectedId ? "selected" : ""}>${escapeHtml(i.name)} (${i.unit})</option>`)
-    .join("");
-  return `<option value="__new__" ${selectedId === "__new__" || !selectedId ? "selected" : ""}>+ Neue Zutat…</option>${opts}`;
-}
-
 function ingredientRowHtml(ingredientId, amount, ingredientsDB) {
+  const ing = ingredientId ? ingredientsDB.find((i) => i.id === ingredientId) : null;
   return `
     <div class="ingredient-row" data-row>
-      <select data-ing>${ingredientOptions(ingredientsDB, ingredientId)}</select>
+      <div class="ing-search-wrap">
+        <input type="text" data-ing-search autocomplete="off" placeholder="Zutat suchen…" value="${escapeHtml(ing ? ing.name : "")}" />
+        <input type="hidden" data-ing-id value="${ingredientId || ""}" />
+        <div class="ing-results" data-ing-results></div>
+      </div>
       <input type="number" step="1" min="0" inputmode="decimal" data-amt value="${amount === "" ? "" : amount}" placeholder="Menge" />
       <button type="button" class="rm" aria-label="Zutat entfernen">×</button>
       <div class="new-ingredient-fields" data-new-fields>

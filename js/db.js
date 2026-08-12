@@ -64,9 +64,19 @@ function migrate(state) {
       state.nutrition.dishes = seeded.dishes;
       changed = true;
     }
-    if (!Array.isArray(state.nutrition.ingredients) || state.nutrition.ingredients.length === 0) {
+    // Zutaten-Datenbank wächst mit der Zeit (siehe seed-data.js) — fehlende
+    // Seed-Zutaten werden per ID nachgetragen statt die Liste zu ersetzen,
+    // damit selbst angelegte Zutaten (z. B. über "+ Neue Zutat") erhalten bleiben.
+    if (!Array.isArray(state.nutrition.ingredients)) {
       state.nutrition.ingredients = seeded.ingredients;
       changed = true;
+    } else {
+      const existingIds = new Set(state.nutrition.ingredients.map((i) => i.id));
+      const missing = seeded.ingredients.filter((i) => !existingIds.has(i.id));
+      if (missing.length > 0) {
+        state.nutrition.ingredients.push(...missing);
+        changed = true;
+      }
     }
     if (!state.nutrition.targets) {
       state.nutrition.targets = seeded.targets;
