@@ -73,6 +73,30 @@ function migrate(state) {
         state.nutrition.dishes.push(...missingDishes);
         changed = true;
       }
+
+      // Erik mag keine Kuhmilch-Trinkmilch/-Joghurt/-Quark (Käse ist okay) —
+      // f1/f3/f4/f6/f24 wurden deshalb auf Sojajoghurt umgestellt. Geräte, die
+      // diese Gerichte schon unter derselben ID gespeichert hatten, bekommen
+      // sonst nie die neue Zutatenliste (Merge-per-ID ergänzt nur Fehlendes).
+      // Hier gezielt nachziehen, aber nur falls noch die alte Milch-Zutat drin
+      // ist — eine eigene dauerhafte Anpassung des Nutzers bleibt unangetastet.
+      const dairyToReplace = ["skyr", "magerquark", "joghurt_natur", "joghurt_griechisch", "vollmilch", "milch_fettarm", "buttermilch", "kefir", "kondensmilch", "ziegenmilch"];
+      const dishesToResync = ["f1", "f3", "f4", "f6", "f24"];
+      dishesToResync.forEach((id) => {
+        const current = state.nutrition.dishes.find((d) => d.id === id);
+        const fresh = seeded.dishes.find((d) => d.id === id);
+        if (!current || !fresh) return;
+        const stillHasDairy =
+          current.base.ingredients.some((i) => dairyToReplace.includes(i.ingredientId)) ||
+          (current.extras && current.extras.erik && current.extras.erik.addIngredients.some((i) => dairyToReplace.includes(i.ingredientId)));
+        if (stillHasDairy) {
+          current.name = fresh.name;
+          current.vegan = fresh.vegan;
+          current.base = fresh.base;
+          current.extras = fresh.extras;
+          changed = true;
+        }
+      });
     }
     // Zutaten-Datenbank wächst mit der Zeit (siehe seed-data.js) — fehlende
     // Seed-Zutaten werden per ID nachgetragen statt die Liste zu ersetzen,

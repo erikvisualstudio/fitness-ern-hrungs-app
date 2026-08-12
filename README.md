@@ -138,14 +138,18 @@ Deftig, 1x Leicht, wenn möglich zusätzlich 1x Schnell.
   ausgeschlossen) noch getrennt.
 - **Datenstand ist geräteweit geteilt**, nicht pro Profil siloed wie das
   Fitness-Tracking — siehe Hinweis oben zu Homescreen-Installation.
-- **Pool:** 74 Gerichte (24 Frühstück, 25 Mittag, 25 Abend) in `js/seed-data.js`
+- **Pool:** 84 Gerichte (24 Frühstück, 30 Mittag, 30 Abend) in `js/seed-data.js`
   (`seedNutrition()`) hinterlegt — die ursprünglichen 6 pro Mahlzeitentyp aus
-  dem Ernährungsplan-Dokument plus eine Erweiterung mit mehr Bowls und mehr
-  Proteinvielfalt (Tofu/Tempeh/Seitan/Edamame/verschiedene Bohnensorten neben
-  Linsen/Kichererbsen), ca. 75 % vegan / 25 % vegetarisch (`vegan`-Feld pro
-  Gericht). Weitere Erweiterung: in `seedNutrition()` Einträge mit derselben
-  Struktur (`id`, `mealType`, `name`, `categories`, `vegan`, `excludeTags`,
-  `base`, `extras`) ergänzen — bestehende Nutzer bekommen neue Gerichte
+  dem Ernährungsplan-Dokument plus zwei Erweiterungsrunden mit mehr Bowls und
+  mehr Proteinvielfalt (Tofu/Tempeh/Seitan/Edamame/verschiedene Bohnensorten
+  neben Linsen/Kichererbsen), ca. 80 % vegan / 20 % vegetarisch (`vegan`-Feld
+  pro Gericht). Erik mag keine Kuhmilch-Trinkmilch/-Joghurt/-Quark (Käse ist
+  okay) — die ursprünglich 5 betroffenen Frühstücksgerichte (Skyr, Magerquark,
+  griechischer Joghurt) laufen deshalb auf Sojajoghurt/Ahornsirup um; neue
+  Gerichte verwenden diese Zutaten bewusst nicht mehr. Weitere Erweiterung: in
+  `seedNutrition()` Einträge mit derselben Struktur (`id`, `mealType`, `name`,
+  `categories`, `vegan`, `excludeTags`, `base`, `extras`) ergänzen — bestehende
+  Nutzer bekommen neue Gerichte
   automatisch beim nächsten Laden nachgetragen (per-ID-Merge, bestehende IDs
   bleiben unangetastet), solange sich die IDs bestehender Gerichte nicht
   ändern (siehe `migrate()` in `js/db.js`).
