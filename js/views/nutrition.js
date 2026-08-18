@@ -21,6 +21,8 @@ import {
   addNewDish,
   assignChoice,
   CATEGORIES,
+  isPinned,
+  togglePin,
 } from "../nutrition.js";
 import { escapeHtml, fmtNum } from "../util.js";
 
@@ -147,6 +149,15 @@ function wireEvents(root, ctx, nutritionState, ingredientsDB) {
   root.querySelectorAll(".dish-card").forEach((card) => {
     card.addEventListener("click", () => {
       setChoice(nutritionState, selectedDate, card.dataset.meal, card.dataset.party, card.dataset.dishId);
+      db.saveNutritionState();
+      render(root, ctx);
+    });
+  });
+
+  root.querySelectorAll("[data-pin-toggle]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      togglePin(nutritionState, selectedDate, btn.dataset.meal, btn.dataset.party, btn.dataset.dishId);
       db.saveNutritionState();
       render(root, ctx);
     });
@@ -460,7 +471,7 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
       dishIds.forEach((dishId) => {
         const dish = db.getDish(dishId);
         if (!dish) return;
-        grid.appendChild(buildDishCard(dish, party, mealType, isSelected(slot, party, dishId), ingredientsDB));
+        grid.appendChild(buildDishCard(dish, party, mealType, isSelected(slot, party, dishId), isPinned(nutritionState, party, mealType, dishId), ingredientsDB));
       });
       section.appendChild(grid);
     }
@@ -487,7 +498,7 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
   return wrap;
 }
 
-function buildDishCard(dish, party, mealType, selected, ingredientsDB) {
+function buildDishCard(dish, party, mealType, selected, pinned, ingredientsDB) {
   const card = document.createElement("button");
   card.type = "button";
   card.className = "dish-card" + (selected ? " selected" : "");
@@ -517,6 +528,9 @@ function buildDishCard(dish, party, mealType, selected, ingredientsDB) {
     </div>
     <div class="dish-desc">${escapeHtml(nele.description)}</div>
     ${portionHtml}
+    <span class="pin-btn ${pinned ? "active" : ""}" data-pin-toggle data-dish-id="${dish.id}" data-party="${party}" data-meal="${mealType}">
+      ${pinned ? "📌 Fixiert — immer vorschlagen" : "📌 Fixieren"}
+    </span>
   `;
   return card;
 }

@@ -51,6 +51,51 @@ export function partiesForMode(mode) {
   return mode === "gemeinsam" ? ["shared"] : ["erik", "nele"];
 }
 
+// --- Fixierte Gerichte ("immer vorschlagen") ---
+//
+// Die Abwechslungs-Logik unten (recencyPenalty) bestraft ein Gericht umso
+// stärker, je kürzlich es gegessen wurde — das ist erwünscht für Abwechslung,
+// sorgt aber dafür, dass ein Gericht, das fast täglich gegessen wird, nach
+// kurzer Zeit dauerhaft aus den 3 Vorschlägen fällt (es hat ja praktisch immer
+// die höchstmögliche Strafe). Ein Pin hebt das für ein bestimmtes Gericht
+// gezielt auf: es wird unabhängig von der Historie immer mit vorgeschlagen,
+// bis es wieder entfixiert wird. Immer pro echter Person + Mahlzeit
+// gespeichert (nicht pro Party), damit es einen Moduswechsel übersteht.
+function ensurePins(nutrition) {
+  if (!nutrition.pins) nutrition.pins = {};
+  if (!nutrition.pins.erik) nutrition.pins.erik = {};
+  if (!nutrition.pins.nele) nutrition.pins.nele = {};
+}
+
+export function getPinnedIds(nutrition, party, mealType) {
+  ensurePins(nutrition);
+  if (party === "shared") {
+    return Array.from(new Set([nutrition.pins.erik[mealType], nutrition.pins.nele[mealType]].filter(Boolean)));
+  }
+  return nutrition.pins[party][mealType] ? [nutrition.pins[party][mealType]] : [];
+}
+
+export function isPinned(nutrition, party, mealType, dishId) {
+  return getPinnedIds(nutrition, party, mealType).includes(dishId);
+}
+
+// Im Modus "gemeinsam" (party "shared") wird für beide Personen dasselbe
+// Gericht fixiert, da es dort ohnehin nur eine gemeinsame Vorschlagsliste
+// gibt. Aktualisiert zusätzlich sofort die Vorschläge des aktuell
+// betrachteten Tages, damit die Fixierung ohne Reroll direkt sichtbar wird.
+export function togglePin(nutrition, dateISO, mealType, party, dishId) {
+  ensurePins(nutrition);
+  const people = party === "shared" ? ["erik", "nele"] : [party];
+  const alreadyPinned = people.every((p) => nutrition.pins[p][mealType] === dishId);
+  people.forEach((p) => {
+    nutrition.pins[p][mealType] = alreadyPinned ? null : dishId;
+  });
+  const slot = nutrition.days[dateISO] && nutrition.days[dateISO][mealType];
+  if (slot) {
+    slot.proposals[party] = computeProposal(nutrition, dateISO, mealType, party, slot.rerollSeed[party] || 0);
+  }
+}
+
 function getExcludeTagsForParty(nutrition, party) {
   if (party === "shared") {
     const erik = nutrition.preferences.erik ? nutrition.preferences.erik.excludeTags : [];
@@ -82,7 +127,7 @@ function getRecentDishIds(nutrition, party, mealType, beforeDateISO) {
   return result;
 }
 
-function pickProposalIds(dishes, mealType, excludeTags, recentIds, seedStr) {
+function pickProposalIds(dishes, mealType, excludeTags, recentIds, seedStr, pinnedIds) {
   const pool = dishes.filter((d) => d.mealType === mealType && !d.excludeTags.some((t) => excludeTags.includes(t)));
   if (pool.length === 0) return [];
 
@@ -104,7 +149,19 @@ function pickProposalIds(dishes, mealType, excludeTags, recentIds, seedStr) {
 
   const used = new Set();
   const result = [];
+
+  // Fixierte Gerichte zuerst — unabhängig von der Abwechslungs-Strafe.
+  (pinnedIds || []).forEach((id) => {
+    if (result.length >= 3 || used.has(id)) return;
+    const d = pool.find((x) => x.id === id);
+    if (d) {
+      result.push(d);
+      used.add(d.id);
+    }
+  });
+
   CATEGORIES.forEach((cat) => {
+    if (result.some((d) => d.categories.includes(cat))) return;
     const pick = ordered.find((d) => d.categories.includes(cat) && !used.has(d.id));
     if (pick) {
       result.push(pick);
@@ -125,7 +182,8 @@ function computeProposal(nutrition, dateISO, mealType, party, rerollSeed) {
   const excludeTags = getExcludeTagsForParty(nutrition, party);
   const recentIds = getRecentDishIds(nutrition, party, mealType, dateISO);
   const seedStr = `${dateISO}|${mealType}|${party}|${rerollSeed || 0}`;
-  return pickProposalIds(nutrition.dishes, mealType, excludeTags, recentIds, seedStr);
+  const pinnedIds = getPinnedIds(nutrition, party, mealType);
+  return pickProposalIds(nutrition.dishes, mealType, excludeTags, recentIds, seedStr, pinnedIds);
 }
 
 function ensureProposals(nutrition, dateISO, mealType) {

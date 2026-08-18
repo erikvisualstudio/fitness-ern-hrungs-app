@@ -573,6 +573,10 @@ export function seedNutrition() {
       nele: { excludeTags: [] },
     },
 
+    // Fixierte Gerichte pro Person + Mahlzeit ("immer vorschlagen", umgeht die
+    // Abwechslungs-Logik) — siehe togglePin() in nutrition.js.
+    pins: { erik: {}, nele: {} },
+
     // Tagespläne, keyed nach ISO-Datum. Wird lazy von nutrition.js befüllt
     // (ensureDayPlan) — hier bewusst leer, damit Vorschläge nicht vorab für
     // beliebig viele Tage generiert werden.

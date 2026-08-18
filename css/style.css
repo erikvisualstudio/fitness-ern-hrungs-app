@@ -505,6 +505,27 @@ textarea {
 .dish-desc { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px; }
 .dish-macro { font-size: 0.82rem; margin-top: 2px; }
 
+.pin-btn {
+  display: inline-block;
+  margin-top: 9px;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+.pin-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pin-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
 .actual-row {
   border-top: 1px solid var(--border);
   padding-top: 11px;

@@ -124,6 +124,10 @@ function migrate(state) {
       state.nutrition.updatedAt = 0;
       changed = true;
     }
+    if (!state.nutrition.pins) {
+      state.nutrition.pins = { erik: {}, nele: {} };
+      changed = true;
+    }
     if (!state.nutrition.days) {
       state.nutrition.days = {};
       changed = true;
