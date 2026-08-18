@@ -120,6 +120,10 @@ function migrate(state) {
       state.nutrition.preferences = seeded.preferences;
       changed = true;
     }
+    if (state.nutrition.updatedAt === undefined) {
+      state.nutrition.updatedAt = 0;
+      changed = true;
+    }
     if (!state.nutrition.days) {
       state.nutrition.days = {};
       changed = true;
@@ -184,6 +188,13 @@ function save(state) {
 }
 
 let state = load();
+
+// Cloud-Sync (js/sync.js) hängt sich hier ein, um lokale Ernährungs-Änderungen zu
+// pushen, ohne dass db.js selbst etwas von Firebase wissen muss.
+let nutritionSaveListeners = [];
+export function onNutritionSaved(cb) {
+  nutritionSaveListeners.push(cb);
+}
 
 export const db = {
   raw() {
@@ -324,6 +335,16 @@ export const db = {
   },
 
   saveNutritionState() {
+    state.nutrition.updatedAt = Date.now();
+    save(state);
+    nutritionSaveListeners.forEach((cb) => cb(state.nutrition));
+  },
+
+  // Übernimmt einen Ernährungs-Datenstand von einem anderen Gerät (Cloud-Sync).
+  // Bewusst OHNE nutritionSaveListeners-Aufruf, sonst würde der gerade erst
+  // empfangene Stand sofort wieder zurück in die Cloud gepusht (Endlosschleife).
+  applyRemoteNutrition(remoteNutrition) {
+    state.nutrition = remoteNutrition;
     save(state);
   },
 };

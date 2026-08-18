@@ -10,7 +10,9 @@ Homescreen hinzufügen".
 
 Reines Vanilla HTML/CSS/JavaScript (ES-Module), kein Build-Tool, keine
 Abhängigkeiten. Daten liegen im `localStorage` des Browsers — jedes Gerät/jeder
-Browser hat seinen eigenen, unabhängigen Datenstand (kein Sync).
+Browser hat seinen eigenen, unabhängigen Datenstand. Ausnahme: die
+Ernährungsdaten werden zusätzlich über Firebase (Firestore) zwischen Geräten
+synchronisiert, siehe unten.
 
 ## Lokal starten
 
@@ -44,10 +46,10 @@ der App gibt es zusätzlich eine Profilauswahl (Erik/Nele) für den Fall, dass
 beide dasselbe Gerät nutzen.
 
 **Ausnahme Ernährung:** Der "Ernährung"-Tab ist bewusst NICHT pro Profil
-getrennt, sondern ein gemeinsamer Haushalts-Datenstand (siehe unten) — der
-lebt aber genauso nur lokal auf dem jeweiligen Gerät, ohne Sync. Empfehlung:
-für die Mahlzeitenplanung ein gemeinsam genutztes Gerät (z. B. Küchen-Tablet)
-verwenden, damit beide dieselbe Planung sehen.
+getrennt, sondern ein gemeinsamer Haushalts-Datenstand (siehe unten), der
+per Cloud-Sync (Firebase) automatisch zwischen Eriks und Neles Geräten
+abgeglichen wird — beide sehen also dieselbe Planung und gegenseitig die
+Nährwert-Scores, auch auf getrennten Handys.
 
 ## GitHub Pages Deployment (Beispiel)
 
@@ -70,6 +72,7 @@ js/db.js                  localStorage-Datenschicht
 js/seed-data.js           Ausgangsdaten (aus den Trainingsplänen + dem Ernährungsplan importiert)
 js/progression.js         Double-Progression-Engine + Blockwochen-/Deload-Logik
 js/nutrition.js            Mahlzeitenplanungs-Engine (Vorschläge, Modus, Reroll)
+js/sync.js                 Cloud-Sync der Ernährungsdaten über Firebase
 js/util.js                 Kleine Hilfsfunktionen (Formatierung, Toast)
 js/app.js                  Router + App-Chrome (Topbar/Tabbar)
 js/views/                  Profilauswahl, Dashboard, Session-Logging, Verlauf, Ernährung, Einstellungen
@@ -174,6 +177,47 @@ Deftig, 1x Leicht, wenn möglich zusätzlich 1x Schnell.
     bei einer Mahlzeit bewusst bei der nächsten ausgeglichen werden kann —
     die App passt Vorschläge dafür nicht automatisch an, das bleibt eine
     bewusste Entscheidung.
+
+## Cloud-Sync der Ernährungsdaten (Firebase)
+
+Nur die Ernährungsdaten (`state.nutrition`) werden synchronisiert — das
+Fitness-Tracking bleibt bewusst rein lokal pro Profil/Gerät. Technisch:
+
+- **Firebase-Projekt:** `erik-nele-ernaehrung`, Firestore + anonyme
+  Authentifizierung. Konfiguration liegt direkt in `js/sync.js`
+  (`FIREBASE_CONFIG`) — das ist bei Firebase-Web-Apps kein Geheimnis, der
+  Zugriffsschutz läuft über die Firestore-Security-Rules, nicht über
+  Geheimhaltung dieser Werte.
+- **Ein gemeinsames Dokument** (`households/erik-nele`) für den ganzen
+  Haushalt. Beim Speichern (`db.saveNutritionState()`) wird der komplette
+  Ernährungs-Datenstand (debounced, 800 ms) dorthin gepusht; ein
+  Firestore-Listener übernimmt Änderungen von anderen Geräten automatisch.
+- **Konfliktauflösung: Last-Write-Wins**, anhand von `state.nutrition.updatedAt`.
+  Kein Feld-für-Feld-Merge — bei einer echten Gleichzeitig-Änderung auf beiden
+  Geräten gewinnt die spätere. Für zwei Personen mit seltenen echten
+  Kollisionen ist das ein bewusst einfacher, ausreichend robuster Trade-off.
+- **Offline-fähig:** Ohne Internet/Firebase bleibt die App normal nutzbar,
+  Sync läuft dann einfach nicht (Status-Anzeige oben auf der Ernährungsseite:
+  "Synchronisiert" / "Verbinde…" / "Offline").
+- **Firestore-Security-Rules** müssen auf authentifizierten Zugriff
+  beschränkt sein (siehe Firebase Console → Firestore Database → Regeln):
+  ```
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /households/{householdId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+  }
+  ```
+  Firestore startet im "Testmodus" mit offenen Regeln für 30 Tage — diese
+  Regeln sollten zeitnah eingetragen werden.
+- Die genutzte Domain (bei GitHub Pages z. B. `erikvisualstudio.github.io`)
+  muss unter Firebase Console → Authentication → Settings →
+  "Autorisierte Domains" eingetragen sein, sonst schlägt die anonyme
+  Anmeldung auf der Live-Seite fehl (lokal via `localhost` funktioniert immer,
+  da automatisch autorisiert).
 
 ## Daten sichern / übertragen
 

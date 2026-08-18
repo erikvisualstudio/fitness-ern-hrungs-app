@@ -5,6 +5,7 @@ import * as logView from "./views/log.js";
 import * as historyView from "./views/history.js";
 import * as settingsView from "./views/settings.js";
 import * as nutritionView from "./views/nutrition.js";
+import { initSync } from "./sync.js";
 
 const appEl = document.getElementById("app");
 const topbarEl = document.getElementById("topbar");
@@ -117,6 +118,13 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", render);
 if (document.readyState !== "loading") render();
 
+// Wenn ein anderes Gerät die Ernährungsdaten aktualisiert hat, nur neu rendern
+// wenn die Ernährungsseite gerade offen ist — sonst würden z. B. gerade
+// ausgefüllte Formulare auf anderen Seiten mitten im Tippen zurückgesetzt.
+window.addEventListener("app:nutrition-synced", () => {
+  if (parseRoute().name === "nutrition") render();
+});
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("service-worker.js").catch((err) => {
@@ -124,3 +132,7 @@ if ("serviceWorker" in navigator) {
     });
   });
 }
+
+// Cloud-Sync (nur Ernährung) im Hintergrund starten — blockiert das erste
+// Rendern nicht, degradiert bei fehlendem Internet einfach zu rein lokal.
+initSync();

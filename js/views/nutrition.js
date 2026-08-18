@@ -25,6 +25,22 @@ import {
 import { escapeHtml, fmtNum } from "../util.js";
 
 let selectedDate = null;
+let syncStatus = "connecting";
+
+const SYNC_STATUS_LABEL = {
+  connecting: "🔄 Verbinde mit Cloud…",
+  connected: "☁️ Synchronisiert",
+  offline: "📴 Offline (nur lokal gespeichert)",
+};
+
+// Ein einziger, dauerhafter Listener (Modul wird nur einmal ausgewertet) statt
+// einer Neu-Registrierung bei jedem render() — aktualisiert das Status-Element
+// direkt im DOM, falls die Ernährungsseite gerade sichtbar ist.
+window.addEventListener("app:sync-status", (e) => {
+  syncStatus = e.detail.status;
+  const el = document.getElementById("sync-status");
+  if (el) el.textContent = SYNC_STATUS_LABEL[syncStatus] || "";
+});
 
 export function mount(root, ctx) {
   if (!selectedDate) selectedDate = todayISO();
@@ -54,6 +70,7 @@ function render(root, ctx) {
   root.innerHTML = `
     <h1>Ernährung</h1>
     <p>Vorausgeplante Tagesauswahl für den Haushalt — je Mahlzeit 3 Optionen aus unterschiedlichen Kategorien.</p>
+    <p class="meta" id="sync-status" style="margin-top:-8px;">${SYNC_STATUS_LABEL[syncStatus] || ""}</p>
 
     <div class="row-between" style="gap:10px; margin: 14px 0 14px;">
       <button class="btn btn-secondary btn-sm" id="prev-day">‹</button>
