@@ -65,7 +65,7 @@ function render(root, ctx) {
   const nutritionState = db.getNutritionState();
   const ingredientsDB = db.getIngredients();
   const day = ensureDayPlan(nutritionState, selectedDate);
-  db.saveNutritionState();
+  db.persistNutritionCache();
 
   const users = db.getUsers();
 

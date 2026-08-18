@@ -344,6 +344,17 @@ export const db = {
     nutritionSaveListeners.forEach((cb) => cb(state.nutrition));
   },
 
+  // Rein lokales Speichern OHNE updatedAt-Bump und OHNE Cloud-Push — für
+  // Fälle, in denen sich nur ein lokal berechneter Cache-Wert ändert (z. B.
+  // frisch generierte Tagesvorschläge beim Aufruf der Seite), aber keine
+  // echte Nutzer-Aktion stattfand. Wichtig, damit bloßes Öffnen der
+  // Ernährungsseite auf einem Gerät nicht den Sync-Zeitstempel hochsetzt und
+  // dadurch die echten Auswahlen des anderen Geräts beim nächsten Abgleich
+  // überschreibt, obwohl gar nichts geändert wurde.
+  persistNutritionCache() {
+    save(state);
+  },
+
   // Übernimmt einen Ernährungs-Datenstand von einem anderen Gerät (Cloud-Sync).
   // Bewusst OHNE nutritionSaveListeners-Aufruf, sonst würde der gerade erst
   // empfangene Stand sofort wieder zurück in die Cloud gepusht (Endlosschleife).
