@@ -147,19 +147,54 @@ function wireEvents(root, ctx, nutritionState, ingredientsDB) {
   });
 
   root.querySelectorAll(".dish-card").forEach((card) => {
-    card.addEventListener("click", () => {
-      setChoice(nutritionState, selectedDate, card.dataset.meal, card.dataset.party, card.dataset.dishId);
-      db.saveNutritionState();
-      render(root, ctx);
-    });
+    bindDishCardInteractions(card, nutritionState, root, ctx);
   });
 
-  root.querySelectorAll("[data-pin-toggle]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      togglePin(nutritionState, selectedDate, btn.dataset.meal, btn.dataset.party, btn.dataset.dishId);
-      db.saveNutritionState();
-      render(root, ctx);
+  // Suchleiste je Mahlzeit/Party: durchsucht ALLE Gerichte des Pools (nicht
+  // nur die 3 Vorschläge) per Namens-Teilstring — blendet währenddessen die
+  // Vorschlagskarten aus und zeigt stattdessen die Treffer. Leeres Suchfeld
+  // schaltet zurück auf die normale Vorschlagsansicht.
+  root.querySelectorAll("[data-dish-search]").forEach((input) => {
+    input.addEventListener("input", () => {
+      const scope = input.closest("[data-search-scope]");
+      const mealType = input.dataset.meal;
+      const party = input.dataset.party;
+      const query = input.value.trim();
+      const hideEls = scope.querySelectorAll(".hide-on-search");
+      const resultsEl = scope.querySelector("[data-search-results]");
+
+      if (!query) {
+        hideEls.forEach((el) => (el.style.display = ""));
+        resultsEl.style.display = "none";
+        resultsEl.innerHTML = "";
+        return;
+      }
+
+      hideEls.forEach((el) => (el.style.display = "none"));
+      resultsEl.style.display = "";
+      const q = normalizeSearch(query);
+      const slot = nutritionState.days[selectedDate][mealType];
+      const matches = nutritionState.dishes
+        .filter((d) => d.mealType === mealType && normalizeSearch(d.name).includes(q))
+        .sort((a, b) => a.name.localeCompare(b.name, "de"));
+
+      resultsEl.innerHTML = "";
+      if (matches.length === 0) {
+        resultsEl.innerHTML = `<p class="meta">Keine Gerichte gefunden.</p>`;
+        return;
+      }
+      matches.forEach((dish) => {
+        const card = buildDishCard(
+          dish,
+          party,
+          mealType,
+          isSelected(slot, party, dish.id),
+          isPinned(nutritionState, party, mealType, dish.id),
+          ingredientsDB
+        );
+        bindDishCardInteractions(card, nutritionState, root, ctx);
+        resultsEl.appendChild(card);
+      });
     });
   });
 
@@ -449,6 +484,7 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
   parties.forEach((party) => {
     const section = document.createElement("div");
     section.style.marginBottom = "6px";
+    section.dataset.searchScope = `${mealType}|${party}`;
 
     if (party !== "shared") {
       const user = users.find((u) => u.id === party);
@@ -459,12 +495,17 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
       section.appendChild(label);
     }
 
+    const searchWrap = document.createElement("div");
+    searchWrap.className = "dish-search-bar";
+    searchWrap.innerHTML = `<input type="text" class="dish-search-input" data-dish-search data-meal="${mealType}" data-party="${party}" placeholder="🔍 Alle ${escapeHtml(MEAL_LABELS[mealType])}-Gerichte durchsuchen…" />`;
+    section.appendChild(searchWrap);
+
     const grid = document.createElement("div");
-    grid.className = "dish-grid";
+    grid.className = "dish-grid hide-on-search";
     const dishIds = slot.proposals[party] || [];
     if (dishIds.length === 0) {
       const empty = document.createElement("p");
-      empty.className = "meta";
+      empty.className = "meta hide-on-search";
       empty.textContent = "Keine passenden Gerichte im Pool (Präferenzen prüfen).";
       section.appendChild(empty);
     } else {
@@ -476,8 +517,14 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
       section.appendChild(grid);
     }
 
+    const searchResults = document.createElement("div");
+    searchResults.className = "dish-grid";
+    searchResults.dataset.searchResults = "1";
+    searchResults.style.display = "none";
+    section.appendChild(searchResults);
+
     const rerollBtn = document.createElement("button");
-    rerollBtn.className = "link-btn";
+    rerollBtn.className = "link-btn hide-on-search";
     rerollBtn.dataset.reroll = party;
     rerollBtn.dataset.meal = mealType;
     rerollBtn.textContent = "🔀 Andere Vorschläge";
@@ -496,6 +543,28 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
   });
 
   return wrap;
+}
+
+// Verdrahtet Auswahl-Klick + Pin-Toggle für eine einzelne Gerichte-Karte.
+// Eigene Funktion statt einer globalen querySelectorAll-Bindung in
+// wireEvents, weil Suchergebnis-Karten dynamisch (bei jedem Tastenanschlag,
+// ohne vollständigen render()) neu erzeugt werden und direkt beim Erzeugen
+// ihre Listener brauchen.
+function bindDishCardInteractions(card, nutritionState, root, ctx) {
+  card.addEventListener("click", () => {
+    setChoice(nutritionState, selectedDate, card.dataset.meal, card.dataset.party, card.dataset.dishId);
+    db.saveNutritionState();
+    render(root, ctx);
+  });
+  const pinBtn = card.querySelector("[data-pin-toggle]");
+  if (pinBtn) {
+    pinBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      togglePin(nutritionState, selectedDate, pinBtn.dataset.meal, pinBtn.dataset.party, pinBtn.dataset.dishId);
+      db.saveNutritionState();
+      render(root, ctx);
+    });
+  }
 }
 
 function buildDishCard(dish, party, mealType, selected, pinned, ingredientsDB) {

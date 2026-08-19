@@ -520,6 +520,13 @@ textarea {
   transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
 }
 .pin-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.dish-search-bar { margin: 8px 0 10px; }
+.dish-search-input {
+  width: 100%;
+  font-size: 0.85rem;
+  padding: 9px 12px;
+}
 .pin-btn.active {
   color: var(--accent);
   border-color: var(--accent);
