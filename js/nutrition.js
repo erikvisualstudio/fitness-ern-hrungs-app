@@ -361,6 +361,15 @@ export function assignChoice(nutrition, dateISO, mealType, personId, dishId) {
   slot.choice[personId] = dishId;
 }
 
+// Hebt die Plan-Wahl einer Person für eine Mahlzeit wieder auf (z. B. über
+// die Suche gewählt, aber doch nicht das Richtige) — im Unterschied zu
+// clearActual() betrifft das die eigentliche Auswahl, nicht eine Anpassung
+// obendrauf.
+export function clearChoice(nutrition, dateISO, mealType, personId) {
+  const slot = nutrition.days[dateISO][mealType];
+  slot.choice[personId] = null;
+}
+
 function slugify(str) {
   return str
     .toLowerCase()

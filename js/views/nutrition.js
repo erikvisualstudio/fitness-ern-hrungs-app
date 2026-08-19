@@ -23,6 +23,7 @@ import {
   CATEGORIES,
   isPinned,
   togglePin,
+  clearChoice,
 } from "../nutrition.js";
 import { escapeHtml, fmtNum } from "../util.js";
 
@@ -217,6 +218,15 @@ function wireEvents(root, ctx, nutritionState, ingredientsDB) {
     btn.addEventListener("click", () => {
       const [personId, mealType] = btn.dataset.resetActual.split("|");
       clearActual(nutritionState, selectedDate, mealType, personId);
+      db.saveNutritionState();
+      render(root, ctx);
+    });
+  });
+
+  root.querySelectorAll("[data-clear-choice]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const [personId, mealType] = btn.dataset.clearChoice.split("|");
+      clearChoice(nutritionState, selectedDate, mealType, personId);
       db.saveNutritionState();
       render(root, ctx);
     });
@@ -635,7 +645,13 @@ function buildActualBlock(nutritionState, ingredientsDB, mealType, user) {
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
         <button class="link-btn" data-toggle-adjust data-toggle-panel="${panelId}">Anpassen</button>
-        ${macros.source !== "plan" ? `<button class="link-btn" style="color:var(--danger);" data-reset-actual="${personId}|${mealType}">Zurücksetzen</button>` : ""}
+        ${
+          macros.source !== "plan"
+            ? `<button class="link-btn" style="color:var(--danger);" data-reset-actual="${personId}|${mealType}">Zurücksetzen</button>`
+            : dishId
+              ? `<button class="link-btn" style="color:var(--danger);" data-clear-choice="${personId}|${mealType}">Auswahl aufheben</button>`
+              : ""
+        }
       </div>
     </div>
     ${adjustPanelHtml(panelId, personId, mealType, dishId, macros.name, macros.ingredients, ingredientsDB)}
