@@ -178,6 +178,27 @@ Deftig, 1x Leicht, wenn möglich zusätzlich 1x Schnell.
     die App passt Vorschläge dafür nicht automatisch an, das bleibt eine
     bewusste Entscheidung.
 
+## Einkaufsliste
+
+Eigener Tab, getrennt von der tageweisen Essensplanung: hier wird nicht "was
+isst du heute", sondern "welche Mittag-/Abendgerichte kochen wir diese Woche"
+gewählt — typischerweise einmal vor Wochenstart.
+
+- Für Mittag und Abend je eine durchsuchbare Liste aller Gerichte im Pool zum
+  An-/Abhaken ("diese Woche geplant" — keine feste Anzahl, einfach so viele
+  wie gewünscht).
+- Daraus wird automatisch eine Zutatenliste berechnet: pro gewähltem Gericht
+  die Haushalts-Gesamtmenge (Basis-Portion + Eriks Zusatz-Delta, falls
+  vorhanden), über alle gewählten Gerichte aufsummiert und nach
+  Zutaten-Kategorie gruppiert.
+- Jede Zutat hat eine Checkbox zum Abhaken (schon zuhause vorhanden oder
+  gerade eingekauft) — abgehakte Posten wandern innerhalb ihrer Kategorie ans
+  Ende der Liste.
+- "Woche zurücksetzen" leert sowohl die Gerichte-Auswahl als auch den
+  Abhak-Fortschritt für den nächsten Durchlauf.
+- Gehört zu `state.nutrition` und wird daher wie der Rest der
+  Ernährungsdaten automatisch mitsynchronisiert (siehe Cloud-Sync unten).
+
 ## Cloud-Sync der Ernährungsdaten (Firebase)
 
 Nur die Ernährungsdaten (`state.nutrition`) werden synchronisiert — das

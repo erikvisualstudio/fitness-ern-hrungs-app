@@ -128,6 +128,10 @@ function migrate(state) {
       state.nutrition.pins = { erik: {}, nele: {} };
       changed = true;
     }
+    if (!state.nutrition.shoppingList) {
+      state.nutrition.shoppingList = { lunchDishIds: [], dinnerDishIds: [], checked: {} };
+      changed = true;
+    }
     if (!state.nutrition.days) {
       state.nutrition.days = {};
       changed = true;

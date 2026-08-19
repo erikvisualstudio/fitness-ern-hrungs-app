@@ -527,6 +527,50 @@ textarea {
   font-size: 0.85rem;
   padding: 9px 12px;
 }
+
+.week-dish-list {
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+.week-dish-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.week-dish-row:last-child { border-bottom: none; }
+.week-dish-row input[type="checkbox"] { flex-shrink: 0; }
+
+.shopping-category { margin-top: 14px; }
+.shopping-category:first-of-type { margin-top: 0; }
+.shopping-category-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.shopping-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.shopping-item:last-child { border-bottom: none; }
+.shopping-item-name { flex: 1; font-size: 0.9rem; }
+.shopping-item-amount { font-size: 0.82rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.shopping-item.checked .shopping-item-name,
+.shopping-item.checked .shopping-item-amount {
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
 .pin-btn.active {
   color: var(--accent);
   border-color: var(--accent);

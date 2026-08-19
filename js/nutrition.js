@@ -43,7 +43,7 @@ function hashStringToSeed(str) {
   return h;
 }
 
-function fmtAmt(n) {
+export function fmtAmt(n) {
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
 }
 
@@ -438,4 +438,66 @@ export function sumDailyActual(nutrition, ingredientsDB, dateISO, personId) {
     }
   });
   return { kcal: Math.round(kcal), protein: Math.round(protein * 10) / 10 };
+}
+
+// --- Einkaufsliste ---
+//
+// Bewusst getrennt von der tageweisen Essensplanung oben: hier wird nicht
+// "was isst du an Tag X", sondern "welche Mittag-/Abendgerichte kochen wir
+// diese Woche" gewählt (typischerweise einmal vor Wochenstart) — daraus wird
+// automatisch eine aufsummierte Zutatenliste berechnet. Ein Dokument, keine
+// Historie: neue Woche = zurücksetzen (resetShoppingWeek).
+export const SHOPPING_MEAL_TYPES = ["lunch", "dinner"];
+
+function ensureShoppingList(nutrition) {
+  if (!nutrition.shoppingList) {
+    nutrition.shoppingList = { lunchDishIds: [], dinnerDishIds: [], checked: {} };
+  }
+  if (!nutrition.shoppingList.lunchDishIds) nutrition.shoppingList.lunchDishIds = [];
+  if (!nutrition.shoppingList.dinnerDishIds) nutrition.shoppingList.dinnerDishIds = [];
+  if (!nutrition.shoppingList.checked) nutrition.shoppingList.checked = {};
+  return nutrition.shoppingList;
+}
+
+export function getShoppingList(nutrition) {
+  return ensureShoppingList(nutrition);
+}
+
+function shoppingKeyForMeal(mealType) {
+  return mealType === "lunch" ? "lunchDishIds" : "dinnerDishIds";
+}
+
+export function toggleShoppingDish(nutrition, mealType, dishId) {
+  const list = ensureShoppingList(nutrition);
+  const key = shoppingKeyForMeal(mealType);
+  const idx = list[key].indexOf(dishId);
+  if (idx === -1) list[key].push(dishId);
+  else list[key].splice(idx, 1);
+}
+
+export function toggleShoppingChecked(nutrition, ingredientId) {
+  const list = ensureShoppingList(nutrition);
+  list.checked[ingredientId] = !list.checked[ingredientId];
+}
+
+export function resetShoppingWeek(nutrition) {
+  const list = ensureShoppingList(nutrition);
+  list.lunchDishIds = [];
+  list.dinnerDishIds = [];
+  list.checked = {};
+}
+
+// Summe der Zutaten aller für die Woche gewählten Gerichte — pro Gericht wird
+// die Haushalts-Gesamtmenge angesetzt (Basis-Portion + Eriks Zusatz-Delta,
+// falls vorhanden), damit beim Kochen die Menge für beide Personen reicht.
+export function computeShoppingIngredients(nutrition) {
+  const list = ensureShoppingList(nutrition);
+  const dishIds = [...list.lunchDishIds, ...list.dinnerDishIds];
+  let combined = [];
+  dishIds.forEach((id) => {
+    const dish = nutrition.dishes.find((d) => d.id === id);
+    if (!dish) return;
+    combined = mergeIngredients(combined, resolvePersonIngredients(dish, "erik"));
+  });
+  return combined;
 }

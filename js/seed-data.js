@@ -577,6 +577,10 @@ export function seedNutrition() {
     // Abwechslungs-Logik) — siehe togglePin() in nutrition.js.
     pins: { erik: {}, nele: {} },
 
+    // Wochen-Einkaufsliste: gewählte Mittag-/Abendgerichte für die kommende
+    // Woche + abgehakte Zutaten. Siehe "Einkaufsliste"-Abschnitt in nutrition.js.
+    shoppingList: { lunchDishIds: [], dinnerDishIds: [], checked: {} },
+
     // Tagespläne, keyed nach ISO-Datum. Wird lazy von nutrition.js befüllt
     // (ensureDayPlan) — hier bewusst leer, damit Vorschläge nicht vorab für
     // beliebig viele Tage generiert werden.
