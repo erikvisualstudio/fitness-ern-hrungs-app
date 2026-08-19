@@ -116,6 +116,24 @@ Original-Plan nicht als kg angegeben (dort steht nur RIR) — beim ersten
 Logging einfach das tatsächlich genutzte Gewicht eintragen, danach greift die
 Progression normal.
 
+## Zwischenspeichern beim Session-Logging
+
+Beim Eintragen einer Einheit landet sonst nichts im Speicher, bis ganz am
+Ende auf "Einheit abschließen" gedrückt wird — bei einer PWA riskant, da
+mobile Betriebssysteme im Hintergrund liegende Tabs gerne aus dem Speicher
+räumen (App gewechselt, Anruf, etc.), wodurch alle bis dahin eingetragenen,
+aber nicht abgeschlossenen Werte verloren gehen.
+
+Deshalb lässt sich jede Übung einzeln über "Zwischenspeichern" fest auf dem
+Gerät ablegen (`state.drafts`, rein lokal, kein Sync), sobald sie fertig ist
+— die Felder werden dabei gesperrt und mit einem "✓ Zwischengespeichert"-
+Badge markiert; "Bearbeiten" hebt die Sperre wieder auf (Werte bleiben als
+Vorbelegung erhalten). Ein Reload oder kompletter Neustart der App stellt
+zwischengespeicherte Übungen unverändert wieder her. Der finale Button
+"Einheit abschließen" überträgt alle Übungen (zwischengespeicherte wie auch
+nur direkt eingetippte, nicht extra gesicherte) gemeinsam in den
+Trainingsverlauf und löscht danach den Zwischenstand.
+
 ## Wie die Ernährungsplanung funktioniert
 
 Der Tab "Ernährung" ist ein Mahlzeiten-**Planer**, kein freier Rezept-Browser

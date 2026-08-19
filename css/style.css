@@ -571,6 +571,20 @@ textarea {
   color: var(--text-dim);
   text-decoration: line-through;
 }
+
+.draft-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 10px;
+}
+
+input:disabled,
+select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--surface-2);
+}
 .pin-btn.active {
   color: var(--accent);
   border-color: var(--accent);

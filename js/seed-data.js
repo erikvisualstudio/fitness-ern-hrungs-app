@@ -135,6 +135,14 @@ export function seedState() {
       nele: [],
     },
 
+    // Zwischenspeicherte, noch nicht abgeschlossene Trainingseinheiten
+    // (pro Person, keyed nach Trainingstag-ID) — siehe "Zwischenspeichern"
+    // in js/views/log.js. Rein lokal, kein Sync.
+    drafts: {
+      erik: {},
+      nele: {},
+    },
+
     nutrition: seedNutrition(),
   };
 }

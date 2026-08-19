@@ -44,6 +44,12 @@ function migrate(state) {
     }
   }
 
+  // Zwischenspeicherte Trainingseinheiten kamen später dazu.
+  if (!state.drafts) {
+    state.drafts = { erik: {}, nele: {} };
+    changed = true;
+  }
+
   // Ernährungsteil kam nach dem ersten Release dazu — Geräte mit älterem
   // Datenstand haben state.nutrition noch gar nicht.
   if (!state.nutrition) {
@@ -272,6 +278,50 @@ export const db = {
   deleteSession(userId, sessionId) {
     state.sessionLogs[userId] = (state.sessionLogs[userId] || []).filter((s) => s.id !== sessionId);
     save(state);
+  },
+
+  // --- Zwischengespeicherte, noch nicht abgeschlossene Trainingseinheiten ---
+  // Rein lokal (kein Sync) — schützt gegen Datenverlust, wenn die App
+  // zwischen dem Eintragen einzelner Übungen beendet/vom System aus dem
+  // Hintergrund geräumt wird, bevor die ganze Einheit fertig ist.
+
+  getDraft(userId, dayId) {
+    return (state.drafts[userId] && state.drafts[userId][dayId]) || null;
+  },
+
+  // entries = geparste Sätze einer Übung. Legt die Übung als "zwischen-
+  // gespeichert" (locked) fest — Werte bleiben aber erhalten, falls über
+  // unlockDraftExercise() nochmal bearbeitet wird.
+  saveDraftExercise(userId, dayId, date, weekInBlock, exerciseId, entries) {
+    if (!state.drafts[userId]) state.drafts[userId] = {};
+    if (!state.drafts[userId][dayId]) {
+      state.drafts[userId][dayId] = { date, weekInBlock, sets: {}, locked: {} };
+    }
+    const draft = state.drafts[userId][dayId];
+    draft.date = date;
+    draft.weekInBlock = weekInBlock;
+    draft.sets[exerciseId] = entries;
+    draft.locked[exerciseId] = true;
+    save(state);
+  },
+
+  // Hebt die Sperre wieder auf, ohne die zuletzt gespeicherten Werte zu
+  // löschen — sie bleiben als Vorbelegung stehen, bis erneut zwischen-
+  // gespeichert wird.
+  unlockDraftExercise(userId, dayId, exerciseId) {
+    const draft = state.drafts[userId] && state.drafts[userId][dayId];
+    if (!draft) return;
+    if (draft.locked) draft.locked[exerciseId] = false;
+    save(state);
+  },
+
+  // Wird aufgerufen, sobald die ganze Einheit final in den Trainingsverlauf
+  // übertragen wurde — der Entwurf wird dann nicht mehr gebraucht.
+  clearDraft(userId, dayId) {
+    if (state.drafts[userId] && state.drafts[userId][dayId]) {
+      delete state.drafts[userId][dayId];
+      save(state);
+    }
   },
 
   getBlockStartDate(userId) {
