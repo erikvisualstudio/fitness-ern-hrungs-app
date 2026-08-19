@@ -490,7 +490,14 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
   `;
   wrap.appendChild(header);
 
-  const parties = partiesForMode(slot.mode);
+  // Im Modus "getrennt" sieht jede Person ihre eigene Vorschlagsspalte
+  // sowieso nur auf dem eigenen Gerät — die Spalte der anderen Person wäre
+  // hier nur Ballast, deshalb wird sie ausgeblendet. Die "Tatsächlich
+  // gegessen"-Übersicht weiter unten bleibt davon unberührt und zeigt
+  // weiterhin beide Personen, damit ihr euch gegenseitig seht.
+  const currentUserId = db.getCurrentUserId();
+  const allParties = partiesForMode(slot.mode);
+  const parties = slot.mode === "getrennt" ? allParties.filter((p) => p === currentUserId) : allParties;
   parties.forEach((party) => {
     const section = document.createElement("div");
     section.style.marginBottom = "6px";
