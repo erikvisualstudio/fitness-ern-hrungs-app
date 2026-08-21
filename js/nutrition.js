@@ -65,6 +65,7 @@ function ensurePins(nutrition) {
   if (!nutrition.pins) nutrition.pins = {};
   if (!nutrition.pins.erik) nutrition.pins.erik = {};
   if (!nutrition.pins.nele) nutrition.pins.nele = {};
+  if (!nutrition.pins.updatedAt) nutrition.pins.updatedAt = {};
 }
 
 export function getPinnedIds(nutrition, party, mealType) {
@@ -89,11 +90,37 @@ export function togglePin(nutrition, dateISO, mealType, party, dishId) {
   const alreadyPinned = people.every((p) => nutrition.pins[p][mealType] === dishId);
   people.forEach((p) => {
     nutrition.pins[p][mealType] = alreadyPinned ? null : dishId;
+    nutrition.pins.updatedAt[p] = Date.now();
   });
   const slot = nutrition.days[dateISO] && nutrition.days[dateISO][mealType];
   if (slot) {
     slot.proposals[party] = computeProposal(nutrition, dateISO, mealType, party, slot.rerollSeed[party] || 0);
   }
+}
+
+// Cloud-Sync (js/sync.js) überschreibt beim Empfangen eines neueren Standes
+// bisher den KOMPLETTEN Ernährungs-Datenstand ("wer zuletzt speichert,
+// gewinnt") — bei den Fixierungen führte das dazu, dass ein Gerät mit einem
+// veralteten lokalen Stand für die ANDERE Person beim eigenen Speichern
+// versehentlich deren gerade erst gesetzten Pin wieder zurückgesetzt hat,
+// auch wenn nur die eigene Fixierung geändert wurde. Fixierungen werden
+// deshalb pro Person mit eigenem Zeitstempel geführt und beim Zusammenführen
+// zweier Datenstände unabhängig voneinander verglichen (siehe
+// db.applyRemoteNutrition), statt komplett überschrieben zu werden.
+export function mergePinsByPerson(localPins, remotePins) {
+  const merged = { erik: {}, nele: {}, updatedAt: {} };
+  ["erik", "nele"].forEach((p) => {
+    const localT = (localPins && localPins.updatedAt && localPins.updatedAt[p]) || 0;
+    const remoteT = (remotePins && remotePins.updatedAt && remotePins.updatedAt[p]) || 0;
+    if (localT >= remoteT) {
+      merged[p] = (localPins && localPins[p]) || {};
+      merged.updatedAt[p] = localT;
+    } else {
+      merged[p] = (remotePins && remotePins[p]) || {};
+      merged.updatedAt[p] = remoteT;
+    }
+  });
+  return merged;
 }
 
 function getExcludeTagsForParty(nutrition, party) {

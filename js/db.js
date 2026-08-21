@@ -1,5 +1,6 @@
 // Lokale Datenschicht auf Basis von localStorage. Kein Backend, kein Sync.
 import { seedState, seedNutrition } from "./seed-data.js";
+import { mergePinsByPerson } from "./nutrition.js";
 
 const STORAGE_KEY = "trainingstracker:v1";
 
@@ -131,7 +132,10 @@ function migrate(state) {
       changed = true;
     }
     if (!state.nutrition.pins) {
-      state.nutrition.pins = { erik: {}, nele: {} };
+      state.nutrition.pins = { erik: {}, nele: {}, updatedAt: {} };
+      changed = true;
+    } else if (!state.nutrition.pins.updatedAt) {
+      state.nutrition.pins.updatedAt = {};
       changed = true;
     }
     if (!state.nutrition.shoppingList) {
@@ -412,7 +416,15 @@ export const db = {
   // Übernimmt einen Ernährungs-Datenstand von einem anderen Gerät (Cloud-Sync).
   // Bewusst OHNE nutritionSaveListeners-Aufruf, sonst würde der gerade erst
   // empfangene Stand sofort wieder zurück in die Cloud gepusht (Endlosschleife).
+  //
+  // Fixierungen (pins) werden dabei NICHT einfach überschrieben, sondern pro
+  // Person unabhängig zusammengeführt (siehe mergePinsByPerson) — sonst
+  // könnte ein Gerät mit veraltetem lokalem Stand beim eigenen Speichern die
+  // gerade erst auf dem anderen Gerät gesetzte Fixierung wieder zurücksetzen.
   applyRemoteNutrition(remoteNutrition) {
+    if (state.nutrition && state.nutrition.pins && remoteNutrition.pins) {
+      remoteNutrition.pins = mergePinsByPerson(state.nutrition.pins, remoteNutrition.pins);
+    }
     state.nutrition = remoteNutrition;
     save(state);
   },

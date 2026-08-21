@@ -8,9 +8,17 @@
 // robust — bei einem echten Gleichzeitig-Konflikt gewinnt der spätere Schreibzugriff
 // und der andere geht verloren.
 //
+// Ausnahme: Fixierungen (pins) werden gezielt personenweise gemerged (siehe
+// mergePinsByPerson in nutrition.js) statt komplett überschrieben — sowohl
+// beim Empfangen (db.applyRemoteNutrition) als auch HIER beim Hochladen, denn
+// sonst könnte ein Gerät mit einem veralteten lokalen Stand für die ANDERE
+// Person beim eigenen Speichern deren gerade erst gesetzten Pin in der Cloud
+// wieder zurücksetzen, obwohl nur die eigene Fixierung geändert wurde.
+//
 // Läuft komplett optional im Hintergrund: ohne Internet/Firebase bleibt die App wie
 // bisher rein lokal nutzbar, initSync() blockiert das erste Rendern nicht.
 import { db, onNutritionSaved } from "./db.js";
+import { mergePinsByPerson } from "./nutrition.js";
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCetyeLXnNRlqZoqnnsmLmGJ8XMBR10Gm8",
@@ -29,6 +37,7 @@ let docRef = null;
 let setDocFn = null;
 let applyingRemote = false;
 let pushTimer = null;
+let lastKnownRemotePins = null;
 
 function setStatus(status) {
   window.dispatchEvent(new CustomEvent("app:sync-status", { detail: { status } }));
@@ -60,6 +69,7 @@ export async function initSync() {
           pushNow(db.getNutritionState());
           return;
         }
+        if (remote.nutrition.pins) lastKnownRemotePins = remote.nutrition.pins;
         const local = db.getNutritionState();
         if ((remote.nutrition.updatedAt || 0) > (local.updatedAt || 0)) {
           applyingRemote = true;
@@ -87,7 +97,8 @@ export async function initSync() {
 
 function pushNow(nutrition) {
   if (!docRef || !setDocFn) return;
-  setDocFn(docRef, { nutrition }).catch((err) => {
+  const payload = lastKnownRemotePins && nutrition.pins ? { ...nutrition, pins: mergePinsByPerson(nutrition.pins, lastKnownRemotePins) } : nutrition;
+  setDocFn(docRef, { nutrition: payload }).catch((err) => {
     console.warn("Konnte Ernährungsdaten nicht synchronisieren:", err);
     setStatus("offline");
   });
