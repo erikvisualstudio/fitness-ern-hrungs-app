@@ -207,6 +207,41 @@ function computeCardio(exercise, sessions) {
   return { kind: "cardio", duration: base.duration, pace: base.pace, hasHistory: relevant.length > 0 };
 }
 
+// Aussagekräftige Kennzahl einer Session für einen Übungstyp — dieselbe
+// Definition trägt sowohl das Verlaufs-Diagramm (history.js) als auch die
+// Rekord-Erkennung unten, damit beide nie auseinanderlaufen.
+export function sessionMetric(exercise, sets) {
+  if (!sets || !sets.length) return null;
+  if (exercise.type === "weighted") return Math.max(...sets.map((s) => s.weight));
+  if (exercise.type === "band") return Math.max(...sets.map((s) => s.reps));
+  if (exercise.type === "bodyweight") {
+    const key = exercise.holdBased ? "seconds" : "reps";
+    return sets.reduce((sum, s) => sum + (Number(s[key]) || 0), 0);
+  }
+  if (exercise.type === "cardio" || exercise.type === "pilates") return sets[0] ? sets[0].duration : null;
+  return null;
+}
+
+const RECORD_ELIGIBLE_TYPES = ["weighted", "band", "bodyweight"];
+
+// "Kleiner Belohnungsmoment" beim Abschließen einer Einheit: prüft, ob die
+// gerade geloggten Sätze einer Übung die bisherige Bestleistung übertreffen.
+// Cardio/Pilates bewusst ausgenommen — "länger gelaufen" ist keine
+// eindeutige Leistungssteigerung wie mehr Gewicht/Wiederholungen/Volumen,
+// das würde sich falsch als "Rekord" anfühlen.
+export function checkNewRecord(exercise, previousSessions, newSets) {
+  if (!RECORD_ELIGIBLE_TYPES.includes(exercise.type)) return null;
+  const newValue = sessionMetric(exercise, newSets);
+  if (newValue == null) return null;
+  const previousValues = previousSessions
+    .map((s) => sessionMetric(exercise, s.sets[exercise.id]))
+    .filter((v) => v != null);
+  if (previousValues.length === 0) return null;
+  const previousBest = Math.max(...previousValues);
+  if (newValue > previousBest) return { value: newValue, previousBest };
+  return null;
+}
+
 function applyDeload(base, exercise) {
   if (base.kind === "weighted") {
     if (base.load == null) return { ...base, deload: true };

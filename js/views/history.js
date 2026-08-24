@@ -1,6 +1,7 @@
 import { db } from "../db.js";
 import { escapeHtml, formatDateDE, fmtNum, showToast } from "../util.js";
 import { icons } from "../icons.js";
+import { sessionMetric } from "../progression.js";
 
 function safetyBannerHtml(note) {
   return `<div class="safety-banner"><span class="status-inline">${icons.warning(15)}${escapeHtml(note)}</span></div>`;
@@ -204,19 +205,6 @@ function topSet(ex, sets) {
   return null;
 }
 
-function metricForSession(ex, sets) {
-  if (!sets) return null;
-  if (ex.type === "weighted") return Math.max(...sets.map((s) => s.weight));
-  if (ex.type === "band") return Math.max(...sets.map((s) => s.reps));
-  if (ex.type === "bodyweight") {
-    const key = ex.holdBased ? "seconds" : "reps";
-    return sets.reduce((sum, s) => sum + (Number(s[key]) || 0), 0);
-  }
-  if (ex.type === "cardio") return sets[0] ? sets[0].duration : null;
-  if (ex.type === "pilates") return sets[0] ? sets[0].duration : null;
-  return null;
-}
-
 function metricLabel(ex) {
   if (ex.type === "weighted") return "Gewicht (kg, Bestsatz)";
   if (ex.type === "band") return "Wiederholungen (max. Satz)";
@@ -234,7 +222,7 @@ function comboChartSvg(ex, sessions) {
   const points = sessions
     .map((s) => ({
       date: s.date,
-      value: metricForSession(ex, s.sets[ex.id]),
+      value: sessionMetric(ex, s.sets[ex.id]),
       reps: ex.type === "weighted" ? (topSet(ex, s.sets[ex.id]) || {}).reps : null,
     }))
     .filter((p) => p.value != null);

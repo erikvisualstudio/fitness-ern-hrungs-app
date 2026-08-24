@@ -132,6 +132,23 @@ Wiederholungszahl des Bestsatzes als kleine Beschriftung über jedem Punkt —
 höchsten Gewicht dieser Session (Gewicht und Wiederholungen bewusst
 zusammen aus demselben Satz, nicht unabhängig je Feld maximiert).
 
+## Belohnungsmomente (Rekord-Erkennung)
+
+Beim Klick auf "Einheit abschließen" prüft `checkNewRecord()`
+(`js/progression.js`) für jede geloggte Übung, ob die Session die bisherige
+Bestleistung übertrifft (Gewicht bei weighted, Wiederholungen bei band,
+Gesamtvolumen bei bodyweight — dieselbe Kennzahl wie im Verlaufs-Diagramm,
+über `sessionMetric()`). Cardio/Pilates sind bewusst ausgenommen, da
+"länger" dort keine eindeutige Leistungssteigerung ist.
+
+Bei einem neuen Rekord erscheint statt der stillen Standard-Bestätigung ein
+betonter Toast (Lime-Fläche, Stern-Icon, kurzer Einschwing-Effekt statt
+reinem Fade) — bewusst ein "kleiner" Moment, kein Konfetti/keine
+Dauer-Animation, und mit `prefers-reduced-motion` abgeschaltet. Der erste
+jemals geloggte Wert einer Übung zählt nicht als Rekord (keine
+Vergleichshistorie vorhanden), sondern erst der erste, der eine
+tatsächliche Vorleistung übertrifft.
+
 ## Zwischenspeichern beim Session-Logging
 
 Beim Eintragen einer Einheit landet sonst nichts im Speicher, bis ganz am

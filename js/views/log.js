@@ -1,5 +1,5 @@
 import { db, uid, todayISO } from "../db.js";
-import { getBlockWeek, isDeloadWeek, getSuggestion, BAND_LEVELS } from "../progression.js";
+import { getBlockWeek, isDeloadWeek, getSuggestion, BAND_LEVELS, checkNewRecord } from "../progression.js";
 import { escapeHtml, fmtNum, showToast } from "../util.js";
 import { icons } from "../icons.js";
 
@@ -68,7 +68,7 @@ export function mount(root, ctx) {
       }
       const date = root.querySelector("#log-date").value || todayISO();
       db.saveDraftExercise(userId, day.id, date, weekInBlock, exId, entries);
-      showToast("Übung zwischengespeichert ✓");
+      showToast(`<span class="status-inline">${icons.check(15)}Übung zwischengespeichert</span>`);
       remount();
     },
     onUnlockExercise(exId) {
@@ -118,6 +118,16 @@ export function mount(root, ctx) {
       return;
     }
 
+    // Rekorde VOR dem Speichern prüfen — sonst würde die gerade eingetragene
+    // Session bereits in ihrer eigenen Vergleichshistorie auftauchen.
+    const records = [];
+    Object.keys(sets).forEach((exId) => {
+      const ex = exercises.find((e) => e.id === exId);
+      const previousSessions = db.getSessionsForExercise(userId, exId);
+      const record = checkNewRecord(ex, previousSessions, sets[exId]);
+      if (record) records.push({ name: ex.name, ...record });
+    });
+
     db.addSession(userId, {
       id: uid("session"),
       date,
@@ -127,7 +137,15 @@ export function mount(root, ctx) {
     });
     db.clearDraft(userId, day.id);
 
-    showToast("Session gespeichert 💪");
+    if (records.length > 0) {
+      const label =
+        records.length === 1
+          ? `Neuer Rekord: ${records[0].name}!`
+          : `${records.length} neue Rekorde: ${records.map((r) => r.name).join(", ")}!`;
+      showToast(`<span class="status-inline">${icons.star(17)}${escapeHtml(label)}</span>`, { celebrate: true });
+    } else {
+      showToast(`<span class="status-inline">${icons.check(17)}Session gespeichert</span>`);
+    }
     navigate("#/dashboard");
   });
 }

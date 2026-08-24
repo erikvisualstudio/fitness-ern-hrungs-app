@@ -36,4 +36,8 @@ export const icons = {
   warning: icon(`<path d="M12 3.5 21.5 20h-19L12 3.5Z"/><line x1="12" y1="9.5" x2="12" y2="13.7"/><circle cx="12" cy="16.8" r="0.6" fill="currentColor" stroke="none"/>`),
 
   search: icon(`<circle cx="10.3" cy="10.3" r="6.3"/><line x1="19" y1="19" x2="14.8" y2="14.8"/>`),
+
+  // Für den Rekord-Belohnungsmoment beim Abschließen einer Einheit — gefüllt
+  // statt Linien-Stil, damit er als kleiner Festmoment heraussticht.
+  star: icon(`<path d="M12 3.3 14.7 9l6.2.9-4.5 4.4 1.1 6.2L12 17.6l-5.5 2.9 1.1-6.2-4.5-4.4L9.3 9 12 3.3Z" fill="currentColor" stroke="none"/>`),
 };

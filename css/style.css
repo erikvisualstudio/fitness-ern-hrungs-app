@@ -494,6 +494,26 @@ input[type="checkbox"], input[type="radio"] {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
 
+/* Belohnungsmoment (z. B. neuer Rekord): eigene, betontere Fläche + kurzer
+   Einschwing-Effekt statt der stillen Standard-Bestätigung. Bewusst
+   zurückhaltend dosiert ("kleiner" Moment) — kein Konfetti, keine Dauerschleife. */
+.toast.celebrate {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.toast.celebrate.show {
+  animation: toast-celebrate-pop 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes toast-celebrate-pop {
+  0% { transform: translateX(-50%) translateY(10px) scale(0.85); opacity: 0; }
+  55% { transform: translateX(-50%) translateY(-7px) scale(1.05); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-4px) scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast.celebrate.show { animation: none; }
+}
+
 .section-title {
   font-size: 0.72rem;
   text-transform: uppercase;
