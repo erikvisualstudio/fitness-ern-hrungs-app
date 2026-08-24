@@ -11,6 +11,28 @@ const STORAGE_KEY = "trainingstracker:v1";
 function migrate(state) {
   let changed = false;
 
+  // muscleGroup kam nachträglich zu den Übungen dazu (für die Statistik nach
+  // Muskelgruppe) — bestehende Geräte haben das Feld an ihren gespeicherten
+  // Übungen noch nicht. Per ID aus einem frischen Seed-Stand nachtragen,
+  // ohne sonst etwas an den (ggf. bereits progressierten) Werten zu ändern.
+  if (state.exercises) {
+    const freshExercises = seedState().exercises;
+    ["erik", "nele"].forEach((userId) => {
+      const stored = state.exercises[userId];
+      const fresh = freshExercises[userId];
+      if (!stored || !fresh) return;
+      stored.forEach((ex) => {
+        if (!ex.muscleGroup) {
+          const match = fresh.find((f) => f.id === ex.id);
+          if (match && match.muscleGroup) {
+            ex.muscleGroup = match.muscleGroup;
+            changed = true;
+          }
+        }
+      });
+    });
+  }
+
   const nele = state.exercises && state.exercises.nele;
   if (nele) {
     const oldPilatesIds = ["n_hundred", "n_rollup", "n_leg_circles", "n_side_leg_series", "n_plank_pilates", "n_swimming", "n_bridge"];

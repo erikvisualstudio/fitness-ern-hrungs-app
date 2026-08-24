@@ -116,6 +116,22 @@ Original-Plan nicht als kg angegeben (dort steht nur RIR) — beim ersten
 Logging einfach das tatsächlich genutzte Gewicht eintragen, danach greift die
 Progression normal.
 
+## Statistik nach Muskelgruppe
+
+Im Tab "Verlauf" hat jede Übung ein `muscleGroup`-Feld (z. B. "Beine",
+"Rücken", "Schultern" — siehe `js/seed-data.js`). Der Bereich "Nach
+Muskelgruppe" bündelt alle Übungen einer Gruppe auf einer Seite, jede mit
+einem eigenen Diagramm (Fläche + Linie + Gitterlinien) statt der reinen
+Sparkline von vorher.
+
+Bei Gewichts-Übungen zeigt das Diagramm bewusst nicht zwei separate Linien
+für Gewicht und Wiederholungen (unübersichtlich bei wechselnden
+Wertebereichen), sondern eine Gewichts-Linie mit der jeweiligen
+Wiederholungszahl des Bestsatzes als kleine Beschriftung über jedem Punkt —
+"Gewicht UND Wiederholungen" auf einen Blick. Bestsatz = der Satz mit dem
+höchsten Gewicht dieser Session (Gewicht und Wiederholungen bewusst
+zusammen aus demselben Satz, nicht unabhängig je Feld maximiert).
+
 ## Zwischenspeichern beim Session-Logging
 
 Beim Eintragen einer Einheit landet sonst nichts im Speicher, bis ganz am

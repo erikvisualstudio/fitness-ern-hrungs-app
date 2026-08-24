@@ -107,7 +107,11 @@ function renderNow() {
     log: { view: logView, title: "Session loggen", back: true },
     nutrition: { view: nutritionView, title: "Ernährung", back: false },
     shopping: { view: shoppingView, title: "Einkaufsliste", back: false },
-    history: { view: historyView, title: params[0] ? "Übung" : "Verlauf", back: Boolean(params[0]) },
+    history: {
+      view: historyView,
+      title: params[0] === "muscle" ? params[1] || "Muskelgruppe" : params[0] ? "Übung" : "Verlauf",
+      back: Boolean(params[0]),
+    },
     settings: { view: settingsView, title: "Einstellungen", back: false },
   };
 
