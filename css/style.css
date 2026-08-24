@@ -1,30 +1,39 @@
 :root {
-  --accent: #6366f1;
-  --accent-dim: #6366f11f;
-  --bg: #f7f6f3;
+  /* Marke "Voltage": ein einzelner elektrischer Lime-Akzent auf ruhigen,
+     leicht grün-stichigen Neutraltönen statt generischem SaaS-Indigo.
+     --accent ist die reine Akzentfarbe (Flächen, Rahmen, Checkbox-Haken) —
+     als Fließtext-Farbe auf hellem Grund wäre reines Lime kaum lesbar,
+     dafür gibt es --accent-text (angepasste Variante für Text) und
+     --accent-ink (immer dunkler Text, der AUF einer Lime-Fläche liegt). */
+  --accent: #c6ff3d;
+  --accent-text: #4f6b12;
+  --accent-ink: #12150a;
+  --accent-dim: #c6ff3d29;
+  --bg: #f4f6ef;
   --surface: #ffffff;
-  --surface-2: #f0efe9;
-  --text: #14141a;
-  --text-dim: #6c6b74;
-  --border: #e6e4de;
+  --surface-2: #eef1e6;
+  --text: #101309;
+  --text-dim: #75806b;
+  --border: #e2e6d8;
   --danger: #d64b3e;
   --ok: #2f9e63;
   --warn: #c4881a;
   --radius: 12px;
   --radius-sm: 9px;
-  --shadow-card: 0 1px 2px rgba(20, 20, 26, 0.04), 0 8px 24px rgba(20, 20, 26, 0.05);
+  --shadow-card: 0 1px 2px rgba(16, 19, 9, 0.04), 0 8px 24px rgba(16, 19, 9, 0.05);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #08080a;
-    --surface: #131318;
-    --surface-2: #1b1b22;
-    --text: #f4f3f1;
-    --text-dim: #94939c;
-    --border: #26262f;
-    --accent-dim: #6366f133;
+    --bg: #0a0d05;
+    --surface: #14180c;
+    --surface-2: #1a2010;
+    --text: #eef4e2;
+    --text-dim: #8b9678;
+    --border: #232b14;
+    --accent-text: #c6ff3d;
+    --accent-dim: #c6ff3d26;
     --shadow-card: none;
   }
 }
@@ -110,7 +119,7 @@ h2 { font-size: 1.2rem; letter-spacing: -0.01em; }
 h3 { font-size: 1rem; font-weight: 700; letter-spacing: -0.005em; }
 p { margin: 0 0 8px; color: var(--text-dim); line-height: 1.45; }
 
-a { color: var(--accent); }
+a { color: var(--accent-text); }
 
 #app {
   max-width: 640px;
@@ -136,7 +145,7 @@ header.topbar {
 header.topbar .back {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 0.95rem;
   font-weight: 600;
   padding: 8px 4px;
@@ -178,7 +187,7 @@ nav.tabbar button {
 nav.tabbar button:active { opacity: 0.55; }
 
 nav.tabbar button .icon { font-size: 1.2rem; transition: transform 150ms ease; }
-nav.tabbar button.active { color: var(--accent); }
+nav.tabbar button.active { color: var(--accent-text); }
 nav.tabbar button.active .icon { transform: translateY(-1px); }
 nav.tabbar button.active::before {
   content: "";
@@ -239,7 +248,7 @@ button {
   border: 1px solid var(--border);
   font-weight: 600;
 }
-.btn-secondary:active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.btn-secondary:active { background: var(--accent-dim); color: var(--accent-text); border-color: var(--accent-text); }
 
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:active { background: #b93e33; }
@@ -277,7 +286,7 @@ button {
   padding: 3px 9px;
   border-radius: 100px;
   background: var(--accent-dim);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .badge-warn { background: #c4881a1f; color: var(--warn); }
 .badge-ok { background: #2f9e631f; color: var(--ok); }
@@ -313,7 +322,7 @@ button {
   font-size: 0.88rem;
   color: var(--text);
 }
-.suggestion strong { color: var(--accent); }
+.suggestion strong { color: var(--accent-text); }
 
 label {
   display: block;
@@ -484,7 +493,7 @@ textarea {
 .link-btn {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 0.85rem;
   font-weight: 700;
   padding: 6px 0;
@@ -580,7 +589,7 @@ textarea {
   cursor: pointer;
   transition: border-color 150ms ease, color 150ms ease, background 150ms ease, transform 100ms ease;
 }
-.pin-btn:active { border-color: var(--accent); color: var(--accent); transform: scale(0.94); }
+.pin-btn:active { border-color: var(--accent-text); color: var(--accent-text); transform: scale(0.94); }
 
 .dish-search-bar { margin: 8px 0 10px; }
 .dish-search-input {
@@ -651,8 +660,8 @@ select:disabled {
   background: var(--surface-2);
 }
 .pin-btn.active {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent-text);
   background: var(--accent-dim);
 }
 
@@ -710,7 +719,7 @@ select:disabled {
 .ing-result-item:last-child { border-bottom: none; }
 .ing-result-item:active { background: var(--accent-dim); }
 .ing-result-item .meta { font-size: 0.72rem; flex-shrink: 0; }
-.ing-result-new { color: var(--accent); font-weight: 700; }
+.ing-result-new { color: var(--accent-text); font-weight: 700; }
 .ingredient-row input[type="number"] {
   flex: 1;
   min-width: 70px;
@@ -747,12 +756,12 @@ select:disabled {
    würde ein :hover nach dem Antippen sonst "kleben" bleiben, bis woanders
    hingetippt wird. Touch bekommt stattdessen die :active-Zustände oben. */
 @media (hover: hover) and (pointer: fine) {
-  .btn:hover { background: var(--accent); color: #fff; }
-  .btn-secondary:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+  .btn:hover { background: var(--accent); color: var(--accent-ink); }
+  .btn-secondary:hover { background: var(--accent-dim); color: var(--accent-text); border-color: var(--accent-text); }
   .btn-danger:hover { background: #b93e33; }
   .list-item:hover { border-color: var(--accent); transform: translateY(-1px); }
   .profile-btn:hover { border-color: var(--accent); background: var(--accent-dim); transform: translateY(-2px); }
   .dish-card:hover { border-color: var(--accent); }
-  .pin-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .pin-btn:hover { border-color: var(--accent-text); color: var(--accent-text); }
   .ing-result-item:hover { background: var(--accent-dim); }
 }
