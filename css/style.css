@@ -222,6 +222,13 @@ button {
   font-family: inherit;
   color: inherit;
   cursor: pointer;
+  /* iOS Safari rendert den Button-Text teils weiter in der System-Akzent-
+     farbe (Blau), auch wenn CSS color gesetzt ist, solange das native
+     Aussehen nicht explizit abgeschaltet wird — genau das schaltet das hier
+     ab, erst dann greift color:inherit oben zuverlässig auf allen Geräten. */
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-text-fill-color: currentColor;
 }
 
 .btn {
