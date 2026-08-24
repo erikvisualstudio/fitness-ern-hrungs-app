@@ -40,4 +40,7 @@ export const icons = {
   // Für den Rekord-Belohnungsmoment beim Abschließen einer Einheit — gefüllt
   // statt Linien-Stil, damit er als kleiner Festmoment heraussticht.
   star: icon(`<path d="M12 3.3 14.7 9l6.2.9-4.5 4.4 1.1 6.2L12 17.6l-5.5 2.9 1.1-6.2-4.5-4.4L9.3 9 12 3.3Z" fill="currentColor" stroke="none"/>`),
+
+  chevronLeft: icon(`<polyline points="15 5 9 12 15 19"/>`),
+  chevronRight: icon(`<polyline points="9 5 15 12 9 19"/>`),
 };

@@ -103,6 +103,7 @@ label,
 .shopping-item,
 .mode-toggle .mode-btn,
 .muscle-chip,
+.cal-cell,
 .ing-result-item {
   -webkit-touch-callout: none;
   user-select: none;
@@ -448,6 +449,55 @@ input[type="checkbox"], input[type="radio"] {
 }
 .muscle-chip .meta { font-size: 0.72rem; font-weight: 700; margin: 0; }
 .muscle-chip:active { border-color: var(--accent); background: var(--accent-dim); transform: scale(0.96); }
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  color: var(--text);
+  transition: border-color 150ms ease, background 150ms ease, transform 100ms ease;
+}
+.cal-cell.empty { background: none; border: none; }
+.cal-cell:disabled { opacity: 0.3; cursor: not-allowed; }
+.cal-cell:active:not(:disabled) { transform: scale(0.92); border-color: var(--accent); }
+.cal-cell.is-today { border-color: var(--accent); border-width: 2px; }
+.cal-cell.is-selected { background: var(--accent-dim); border-color: var(--accent); }
+.cal-cell.has-session { background: var(--accent-dim); }
+.cal-cell.has-rest { opacity: 0.65; }
+.cal-daynum { font-weight: 700; font-variant-numeric: tabular-nums; }
+.cal-mark { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; line-height: 1; }
+.cal-mark-session { color: var(--accent-text); }
+.cal-mark-rest { color: var(--text-dim); }
+
+.cal-detail-box {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.cal-day-picks { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .empty-state {
   text-align: center;
@@ -829,4 +879,5 @@ select:disabled {
   .pin-btn:hover { border-color: var(--accent-text); color: var(--accent-text); }
   .ing-result-item:hover { background: var(--accent-dim); }
   .muscle-chip:hover { border-color: var(--accent); }
+  .cal-cell:not(:disabled):hover { border-color: var(--accent); }
 }

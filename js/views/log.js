@@ -12,6 +12,11 @@ const PACE_OPTIONS = ["locker", "moderat", "zügig"];
 export function mount(root, ctx) {
   const { navigate, params } = ctx;
   const dayId = params[0];
+  // Optionales Zieldatum aus dem Kalender-Nachtragen (#/log/:dayId/:date) —
+  // ein bereits laufender Zwischenstand für diesen Tag hat aber Vorrang,
+  // sonst würde ein erneuter Aufruf über den Kalender das schon begonnene
+  // Datum überschreiben.
+  const targetDate = params[1] || todayISO();
   const userId = db.getCurrentUserId();
   const days = db.getWorkoutDays(userId);
   const day = days.find((d) => d.id === dayId);
@@ -45,7 +50,7 @@ export function mount(root, ctx) {
     <div class="field-row" style="margin: 14px 0 20px;">
       <div>
         <label for="log-date">Datum</label>
-        <input type="date" id="log-date" value="${draft && draft.date ? draft.date : todayISO()}" max="${todayISO()}" />
+        <input type="date" id="log-date" value="${draft && draft.date ? draft.date : targetDate}" max="${todayISO()}" />
       </div>
     </div>
 

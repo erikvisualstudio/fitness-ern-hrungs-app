@@ -132,6 +132,28 @@ Wiederholungszahl des Bestsatzes als kleine Beschriftung über jedem Punkt —
 höchsten Gewicht dieser Session (Gewicht und Wiederholungen bewusst
 zusammen aus demselben Satz, nicht unabhängig je Feld maximiert).
 
+## Kalender (Dashboard)
+
+Die feste "Tag 1 bis Tag 5"-Liste oben auf dem Dashboard bleibt als
+Referenz-Reihenfolge stehen, ist aber nicht mehr die einzige Sicht auf die
+Trainingswoche: darunter zeigt ein Monatskalender, an welchem echten
+Kalendertag welcher Trainingstag tatsächlich gemacht wurde (Kürzel "T1"–"T5"
+auf dem jeweiligen Datum) oder ob der Tag bewusst als Pausetag markiert
+wurde — unabhängig von der festen Reihenfolge, z. B. Tag 5 vor Tag 3 machen,
+weil das Wetter zum Laufen besser passt.
+
+- Ein Tag antippen klappt ein Detail-Panel darunter auf:
+  - **Bereits geloggt** → zeigt welcher Trainingstag, mit Löschen-Option.
+  - **Als Pausetag markiert** → Option zum Aufheben.
+  - **Leer** → fünf Kurzwahl-Buttons (T1–T5) zum Nachtragen für genau dieses
+    Datum, plus "Als Pausetag markieren".
+- "Nachtragen" öffnet `#/log/:dayId/:datum` — dieselbe Logging-Seite wie
+  sonst, nur mit dem gewählten Kalendertag statt heute vorausgefüllt.
+- Zukünftige Tage sind nicht anklickbar (kann man ja noch nicht gemacht
+  haben), Monatsnavigation geht nicht über den aktuellen Monat hinaus.
+- Pausetage sind eine reine Markierung (`state.restDays`, kein Session-
+  Eintrag) — rein lokal, kein Sync (wie der Rest des Fitness-Trackings).
+
 ## Belohnungsmomente (Rekord-Erkennung)
 
 Beim Klick auf "Einheit abschließen" prüft `checkNewRecord()`

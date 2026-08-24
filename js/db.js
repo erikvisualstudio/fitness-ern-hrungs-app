@@ -73,6 +73,12 @@ function migrate(state) {
     changed = true;
   }
 
+  // Pausetage (Kalenderansicht im Dashboard) kamen später dazu.
+  if (!state.restDays) {
+    state.restDays = { erik: [], nele: [] };
+    changed = true;
+  }
+
   // Ernährungsteil kam nach dem ersten Release dazu — Geräte mit älterem
   // Datenstand haben state.nutrition noch gar nicht.
   if (!state.nutrition) {
@@ -365,6 +371,24 @@ export const db = {
       delete state.drafts[userId][dayId];
       save(state);
     }
+  },
+
+  // --- Kalender / Pausetage ---
+
+  getRestDays(userId) {
+    return state.restDays[userId] || [];
+  },
+
+  // Ohne Toggle-Sonderfall für "schon eine Session an dem Tag" — das prüft
+  // die aufrufende View vorher (Kalender bietet "Als Pausetag markieren" nur
+  // an Tagen ohne bereits geloggte Session an).
+  toggleRestDay(userId, dateISO) {
+    if (!state.restDays[userId]) state.restDays[userId] = [];
+    const arr = state.restDays[userId];
+    const idx = arr.indexOf(dateISO);
+    if (idx === -1) arr.push(dateISO);
+    else arr.splice(idx, 1);
+    save(state);
   },
 
   getBlockStartDate(userId) {

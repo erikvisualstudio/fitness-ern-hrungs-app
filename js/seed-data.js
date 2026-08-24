@@ -143,6 +143,13 @@ export function seedState() {
       nele: {},
     },
 
+    // Explizit als Pausetag markierte Kalendertage (ISO-Datum), siehe
+    // Kalender im Dashboard.
+    restDays: {
+      erik: [],
+      nele: [],
+    },
+
     nutrition: seedNutrition(),
   };
 }
