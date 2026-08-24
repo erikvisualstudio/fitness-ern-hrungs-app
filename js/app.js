@@ -7,17 +7,18 @@ import * as settingsView from "./views/settings.js";
 import * as nutritionView from "./views/nutrition.js";
 import * as shoppingView from "./views/shopping.js";
 import { initSync } from "./sync.js";
+import { icons } from "./icons.js";
 
 const appEl = document.getElementById("app");
 const topbarEl = document.getElementById("topbar");
 const tabbarEl = document.getElementById("tabbar");
 
 const TABS = [
-  { key: "dashboard", label: "Heute", icon: "🏠", href: "#/dashboard" },
-  { key: "nutrition", label: "Ernährung", icon: "🥗", href: "#/nutrition" },
-  { key: "shopping", label: "Einkauf", icon: "🛒", href: "#/shopping" },
-  { key: "history", label: "Verlauf", icon: "📈", href: "#/history" },
-  { key: "settings", label: "Einstellungen", icon: "⚙️", href: "#/settings" },
+  { key: "dashboard", label: "Heute", icon: icons.home, href: "#/dashboard" },
+  { key: "nutrition", label: "Ernährung", icon: icons.nutrition, href: "#/nutrition" },
+  { key: "shopping", label: "Einkauf", icon: icons.cart, href: "#/shopping" },
+  { key: "history", label: "Verlauf", icon: icons.trending, href: "#/history" },
+  { key: "settings", label: "Einstellungen", icon: icons.settings, href: "#/settings" },
 ];
 
 function navigate(hash) {
@@ -70,7 +71,7 @@ function renderChrome(routeName, title, showBack) {
   const active = activeTabFor(routeName);
   tabbarEl.innerHTML = TABS.map(
     (t) => `<button class="${t.key === active ? "active" : ""}" data-tab="${t.href}">
-      <span class="icon">${t.icon}</span>${t.label}
+      <span class="icon">${t.icon(21)}</span>${t.label}
     </button>`
   ).join("");
   tabbarEl.querySelectorAll("[data-tab]").forEach((btn) => {

@@ -187,7 +187,8 @@ nav.tabbar button {
 }
 nav.tabbar button:active { opacity: 0.55; }
 
-nav.tabbar button .icon { font-size: 1.2rem; transition: transform 150ms ease; }
+nav.tabbar button .icon { display: flex; transition: transform 150ms ease; }
+nav.tabbar button .icon svg { display: block; }
 nav.tabbar button.active { color: var(--accent-text); }
 nav.tabbar button.active .icon { transform: translateY(-1px); }
 nav.tabbar button.active::before {
@@ -311,6 +312,9 @@ button {
   font-size: 0.88rem;
   font-weight: 700;
 }
+
+.status-inline { display: inline-flex; align-items: center; gap: 6px; }
+.status-inline svg { flex-shrink: 0; }
 
 .safety-banner {
   background: linear-gradient(135deg, #d64b3e1a, #d64b3e0a);
@@ -623,10 +627,19 @@ textarea {
 .pin-btn:active { border-color: var(--accent-text); color: var(--accent-text); transform: scale(0.94); }
 
 .dish-search-bar { margin: 8px 0 10px; }
+.search-input-wrap { position: relative; }
+.search-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  pointer-events: none;
+}
 .dish-search-input {
   width: 100%;
   font-size: 0.85rem;
-  padding: 9px 12px;
+  padding: 9px 12px 9px 34px;
 }
 
 .week-dish-list {

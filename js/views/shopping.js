@@ -9,6 +9,7 @@ import {
   fmtAmt,
 } from "../nutrition.js";
 import { escapeHtml } from "../util.js";
+import { icons } from "../icons.js";
 
 const MEAL_LABEL = { lunch: "Mittagsgerichte", dinner: "Abendgerichte" };
 
@@ -57,7 +58,7 @@ function mealPickerShellHtml(mealType, list) {
         <div class="section-title" style="margin:0;">${MEAL_LABEL[mealType]} für die Woche</div>
         <span class="meta">${list[key].length} gewählt</span>
       </div>
-      <input type="text" class="dish-search-input" data-week-search="${mealType}" placeholder="🔍 Gericht suchen…" />
+      <div class="search-input-wrap">${icons.search(16)}<input type="text" class="dish-search-input" data-week-search="${mealType}" placeholder="Gericht suchen…" /></div>
       <div class="week-dish-list" data-week-list="${mealType}"></div>
     </div>
   `;

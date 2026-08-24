@@ -1,6 +1,11 @@
 import { db, uid, todayISO } from "../db.js";
 import { getBlockWeek, isDeloadWeek, getSuggestion, BAND_LEVELS } from "../progression.js";
 import { escapeHtml, fmtNum, showToast } from "../util.js";
+import { icons } from "../icons.js";
+
+function safetyBannerHtml(note) {
+  return `<div class="safety-banner"><span class="status-inline">${icons.warning(15)}${escapeHtml(note)}</span></div>`;
+}
 
 const PACE_OPTIONS = ["locker", "moderat", "zügig"];
 
@@ -33,7 +38,7 @@ export function mount(root, ctx) {
 
   root.innerHTML = `
     <h1>${escapeHtml(day.name)}</h1>
-    ${deload ? `<div class="deload-banner">🟡 Deload-Woche — bewusst reduziertes Gewicht/Volumen, kein neuer Bestwert-Versuch.</div>` : ""}
+    ${deload ? `<div class="deload-banner"><span class="status-inline">${icons.warning(15)}Deload-Woche — bewusst reduziertes Gewicht/Volumen, kein neuer Bestwert-Versuch.</span></div>` : ""}
     ${day.note ? `<p>${escapeHtml(day.note)}</p>` : ""}
     <p class="meta">Jede Übung lässt sich einzeln zwischenspeichern, sobald du fertig bist — das schützt gegen Datenverlust, falls du zwischendurch die App verlässt. Ganz unten überträgst du dann die komplette Einheit in den Verlauf.</p>
 
@@ -46,7 +51,7 @@ export function mount(root, ctx) {
 
     <div id="exercise-list"></div>
 
-    <button class="btn" id="save-session" style="margin-top: 8px;">✅ Einheit abschließen</button>
+    <button class="btn" id="save-session" style="margin-top: 8px;"><span class="status-inline">${icons.check(17)}Einheit abschließen</span></button>
   `;
 
   function remount() {
@@ -202,10 +207,7 @@ function buildExerciseBlock(ex, suggestion, draft, callbacks) {
   wrap.appendChild(header);
 
   if (ex.safetyNote) {
-    const note = document.createElement("div");
-    note.className = "safety-banner";
-    note.textContent = `⚠️ ${ex.safetyNote}`;
-    wrap.appendChild(note);
+    wrap.insertAdjacentHTML("beforeend", safetyBannerHtml(ex.safetyNote));
   }
 
   const sugg = document.createElement("div");
@@ -301,7 +303,7 @@ function buildPilatesGroupBlock(pilatesExercises, suggestions, draft, callbacks)
     container.dataset.exercise = ex.id;
     container.innerHTML = setRowHtml(ex, 1, suggestion, savedEntry, locked);
     sugg.innerHTML = suggestionText(ex, suggestion);
-    safetyHolder.innerHTML = ex.safetyNote ? `<div class="safety-banner">⚠️ ${escapeHtml(ex.safetyNote)}</div>` : "";
+    safetyHolder.innerHTML = ex.safetyNote ? safetyBannerHtml(ex.safetyNote) : "";
 
     statusHolder.innerHTML = locked ? draftStatusHtml(ex.id) : "";
     const unlockBtn = statusHolder.querySelector("[data-unlock-exercise]");

@@ -1,5 +1,10 @@
 import { db } from "../db.js";
 import { escapeHtml, formatDateDE, fmtNum, showToast } from "../util.js";
+import { icons } from "../icons.js";
+
+function safetyBannerHtml(note) {
+  return `<div class="safety-banner"><span class="status-inline">${icons.warning(15)}${escapeHtml(note)}</span></div>`;
+}
 
 export function mount(root, { navigate, params }) {
   if (params[0] === "muscle") {
@@ -140,7 +145,7 @@ function mountDetail(root, exerciseId, navigate) {
   root.innerHTML = `
     <h1>${escapeHtml(ex.name)}</h1>
     ${ex.muscleGroup ? `<button class="link-btn" id="to-muscle" style="margin-top:-8px;">${escapeHtml(ex.muscleGroup)} — alle Übungen ›</button>` : ""}
-    ${ex.safetyNote ? `<div class="safety-banner">⚠️ ${escapeHtml(ex.safetyNote)}</div>` : ""}
+    ${ex.safetyNote ? safetyBannerHtml(ex.safetyNote) : ""}
     ${sessions.length ? `<div class="card">${comboChartSvg(ex, sessions)}</div>` : ""}
     ${
       sessions.length

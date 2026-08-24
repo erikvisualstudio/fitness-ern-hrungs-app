@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v29";
+const CACHE_VERSION = "v30";
 const CACHE_NAME = `trainingstracker-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -13,6 +13,7 @@ const APP_SHELL = [
   "./js/nutrition.js",
   "./js/sync.js",
   "./js/util.js",
+  "./js/icons.js",
   "./js/views/profile.js",
   "./js/views/dashboard.js",
   "./js/views/log.js",

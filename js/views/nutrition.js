@@ -26,15 +26,21 @@ import {
   clearChoice,
 } from "../nutrition.js";
 import { escapeHtml, fmtNum } from "../util.js";
+import { icons } from "../icons.js";
 
 let selectedDate = null;
 let syncStatus = "connecting";
 
-const SYNC_STATUS_LABEL = {
-  connecting: "🔄 Verbinde mit Cloud…",
-  connected: "☁️ Synchronisiert",
-  offline: "📴 Offline (nur lokal gespeichert)",
+const SYNC_STATUS = {
+  connecting: { icon: icons.sync, label: "Verbinde mit Cloud…" },
+  connected: { icon: icons.cloud, label: "Synchronisiert" },
+  offline: { icon: icons.cloudOff, label: "Offline (nur lokal gespeichert)" },
 };
+
+function syncStatusHtml(status) {
+  const s = SYNC_STATUS[status] || SYNC_STATUS.connecting;
+  return `<span class="status-inline">${s.icon(15)}${s.label}</span>`;
+}
 
 // Ein einziger, dauerhafter Listener (Modul wird nur einmal ausgewertet) statt
 // einer Neu-Registrierung bei jedem render() — aktualisiert das Status-Element
@@ -42,7 +48,7 @@ const SYNC_STATUS_LABEL = {
 window.addEventListener("app:sync-status", (e) => {
   syncStatus = e.detail.status;
   const el = document.getElementById("sync-status");
-  if (el) el.textContent = SYNC_STATUS_LABEL[syncStatus] || "";
+  if (el) el.innerHTML = syncStatusHtml(syncStatus);
 });
 
 export function mount(root, ctx) {
@@ -73,7 +79,7 @@ function render(root, ctx) {
   root.innerHTML = `
     <h1>Ernährung</h1>
     <p>Vorausgeplante Tagesauswahl für den Haushalt — je Mahlzeit 3 Optionen aus unterschiedlichen Kategorien.</p>
-    <p class="meta" id="sync-status" style="margin-top:-8px;">${SYNC_STATUS_LABEL[syncStatus] || ""}</p>
+    <p class="meta" id="sync-status" style="margin-top:-8px;">${syncStatusHtml(syncStatus)}</p>
 
     <div class="row-between" style="gap:10px; margin: 14px 0 14px;">
       <button class="btn btn-secondary btn-sm" id="prev-day">‹</button>
@@ -514,7 +520,7 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
 
     const searchWrap = document.createElement("div");
     searchWrap.className = "dish-search-bar";
-    searchWrap.innerHTML = `<input type="text" class="dish-search-input" data-dish-search data-meal="${mealType}" data-party="${party}" placeholder="🔍 Alle ${escapeHtml(MEAL_LABELS[mealType])}-Gerichte durchsuchen…" />`;
+    searchWrap.innerHTML = `<div class="search-input-wrap">${icons.search(16)}<input type="text" class="dish-search-input" data-dish-search data-meal="${mealType}" data-party="${party}" placeholder="Alle ${escapeHtml(MEAL_LABELS[mealType])}-Gerichte durchsuchen…" /></div>`;
     section.appendChild(searchWrap);
 
     const grid = document.createElement("div");
@@ -544,7 +550,7 @@ function buildSlotBlock(slot, mealType, nutritionState, ingredientsDB, users) {
     rerollBtn.className = "link-btn hide-on-search";
     rerollBtn.dataset.reroll = party;
     rerollBtn.dataset.meal = mealType;
-    rerollBtn.textContent = "🔀 Andere Vorschläge";
+    rerollBtn.innerHTML = `<span class="status-inline">${icons.shuffle(15)}Andere Vorschläge</span>`;
     section.appendChild(rerollBtn);
 
     wrap.appendChild(section);
@@ -615,7 +621,7 @@ function buildDishCard(dish, party, mealType, selected, pinned, ingredientsDB) {
     <div class="dish-desc">${escapeHtml(nele.description)}</div>
     ${portionHtml}
     <span class="pin-btn ${pinned ? "active" : ""}" data-pin-toggle data-dish-id="${dish.id}" data-party="${party}" data-meal="${mealType}">
-      ${pinned ? "📌 Fixiert — immer vorschlagen" : "📌 Fixieren"}
+      <span class="status-inline">${icons.pin(13)}${pinned ? "Fixiert — immer vorschlagen" : "Fixieren"}</span>
     </span>
   `;
   return card;
