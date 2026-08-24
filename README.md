@@ -216,6 +216,13 @@ gewählt — typischerweise einmal vor Wochenstart.
   Abhak-Fortschritt für den nächsten Durchlauf.
 - Gehört zu `state.nutrition` und wird daher wie der Rest der
   Ernährungsdaten automatisch mitsynchronisiert (siehe Cloud-Sync unten).
+- **Verknüpfung mit der Tagesplanung:** ein für die Woche gewähltes Gericht
+  wird automatisch fixiert (siehe `syncShoppingPin()` in `js/nutrition.js`)
+  — dadurch taucht es garantiert unter den 3 Tagesvorschlägen in der
+  Ernährungsplanung auf, ohne dass es jeden Tag neu gesucht werden muss.
+  Wird es hier wieder abgewählt, wird es automatisch wieder entfixiert.
+  Fixierungen unterstützen dafür mehrere gleichzeitig fixierte Gerichte pro
+  Person + Mahlzeit (nicht mehr nur eins).
 
 ## Cloud-Sync der Ernährungsdaten (Firebase)
 

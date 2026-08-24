@@ -32,6 +32,7 @@ function render(root, ctx) {
   root.innerHTML = `
     <h1>Einkaufsliste</h1>
     <p>Vor dem Wocheneinkauf: Mittag- und Abendgerichte für die kommende Woche wählen — daraus wird automatisch die Zutatenliste berechnet.</p>
+    <p class="meta" style="margin-top:-8px;">📌 Gewählte Gerichte werden automatisch für Erik &amp; Nele fixiert — sie tauchen dadurch in der Ernährung als Tagesvorschlag auf, ohne dass ihr sie extra suchen müsst. Beim Abwählen hier wird das genauso automatisch wieder aufgehoben.</p>
 
     ${SHOPPING_MEAL_TYPES.map((mealType) => mealPickerShellHtml(mealType, list)).join("")}
 

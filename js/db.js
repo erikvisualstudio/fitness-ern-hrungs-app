@@ -134,9 +134,26 @@ function migrate(state) {
     if (!state.nutrition.pins) {
       state.nutrition.pins = { erik: {}, nele: {}, updatedAt: {} };
       changed = true;
-    } else if (!state.nutrition.pins.updatedAt) {
-      state.nutrition.pins.updatedAt = {};
-      changed = true;
+    } else {
+      if (!state.nutrition.pins.updatedAt) {
+        state.nutrition.pins.updatedAt = {};
+        changed = true;
+      }
+      // Fixierungen waren ursprünglich ein einzelner Wert pro Person+Mahlzeit
+      // (nur EIN Gericht gleichzeitig fixierbar) — jetzt eine Liste, damit z. B.
+      // mehrere für die Woche eingekaufte Gerichte gleichzeitig fixiert sein
+      // können. Bestehende Einzelwerte hier in Listen umwandeln.
+      ["erik", "nele"].forEach((p) => {
+        const personPins = state.nutrition.pins[p];
+        if (!personPins) return;
+        Object.keys(personPins).forEach((mealType) => {
+          const val = personPins[mealType];
+          if (!Array.isArray(val)) {
+            personPins[mealType] = val ? [val] : [];
+            changed = true;
+          }
+        });
+      });
     }
     if (!state.nutrition.shoppingList) {
       state.nutrition.shoppingList = { lunchDishIds: [], dinnerDishIds: [], checked: {} };

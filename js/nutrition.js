@@ -68,16 +68,31 @@ function ensurePins(nutrition) {
   if (!nutrition.pins.updatedAt) nutrition.pins.updatedAt = {};
 }
 
+// Pro Person+Mahlzeit jetzt eine LISTE fixierter Gerichte (nicht nur eins) —
+// nötig, damit z. B. alle für die Woche eingekauften Mittagsgerichte
+// gleichzeitig fixiert sein können, siehe syncShoppingPin() weiter unten.
 export function getPinnedIds(nutrition, party, mealType) {
   ensurePins(nutrition);
   if (party === "shared") {
-    return Array.from(new Set([nutrition.pins.erik[mealType], nutrition.pins.nele[mealType]].filter(Boolean)));
+    const erikPins = nutrition.pins.erik[mealType] || [];
+    const nelePins = nutrition.pins.nele[mealType] || [];
+    return Array.from(new Set([...erikPins, ...nelePins]));
   }
-  return nutrition.pins[party][mealType] ? [nutrition.pins[party][mealType]] : [];
+  return nutrition.pins[party][mealType] || [];
 }
 
 export function isPinned(nutrition, party, mealType, dishId) {
   return getPinnedIds(nutrition, party, mealType).includes(dishId);
+}
+
+function refreshTodayProposals(nutrition, mealType) {
+  const d = new Date();
+  const dateISO = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const slot = nutrition.days[dateISO] && nutrition.days[dateISO][mealType];
+  if (!slot) return;
+  partiesForMode(slot.mode).forEach((party) => {
+    slot.proposals[party] = computeProposal(nutrition, dateISO, mealType, party, slot.rerollSeed[party] || 0);
+  });
 }
 
 // Im Modus "gemeinsam" (party "shared") wird für beide Personen dasselbe
@@ -87,15 +102,38 @@ export function isPinned(nutrition, party, mealType, dishId) {
 export function togglePin(nutrition, dateISO, mealType, party, dishId) {
   ensurePins(nutrition);
   const people = party === "shared" ? ["erik", "nele"] : [party];
-  const alreadyPinned = people.every((p) => nutrition.pins[p][mealType] === dishId);
+  const alreadyPinned = people.every((p) => (nutrition.pins[p][mealType] || []).includes(dishId));
   people.forEach((p) => {
-    nutrition.pins[p][mealType] = alreadyPinned ? null : dishId;
+    const current = nutrition.pins[p][mealType] || [];
+    nutrition.pins[p][mealType] = alreadyPinned ? current.filter((id) => id !== dishId) : [...current, dishId];
     nutrition.pins.updatedAt[p] = Date.now();
   });
   const slot = nutrition.days[dateISO] && nutrition.days[dateISO][mealType];
   if (slot) {
     slot.proposals[party] = computeProposal(nutrition, dateISO, mealType, party, slot.rerollSeed[party] || 0);
   }
+}
+
+// Verknüpft die Einkaufsliste mit den Tagesvorschlägen: ein Gericht, das für
+// die Woche eingekauft wird, gilt automatisch als fixiert (für beide
+// Personen — Mittag/Abend sind ohnehin standardmäßig "gemeinsam"), damit es
+// garantiert unter den 3 Tagesvorschlägen auftaucht, statt dass man es jeden
+// Tag neu suchen muss. Wird das Gericht wieder aus der Einkaufsliste
+// entfernt, wird es genauso automatisch wieder entfixiert.
+export function syncShoppingPin(nutrition, mealType, dishId, wanted) {
+  ensurePins(nutrition);
+  ["erik", "nele"].forEach((p) => {
+    const current = nutrition.pins[p][mealType] || [];
+    const has = current.includes(dishId);
+    if (wanted && !has) {
+      nutrition.pins[p][mealType] = [...current, dishId];
+      nutrition.pins.updatedAt[p] = Date.now();
+    } else if (!wanted && has) {
+      nutrition.pins[p][mealType] = current.filter((id) => id !== dishId);
+      nutrition.pins.updatedAt[p] = Date.now();
+    }
+  });
+  refreshTodayProposals(nutrition, mealType);
 }
 
 // Cloud-Sync (js/sync.js) überschreibt beim Empfangen eines neueren Standes
@@ -498,8 +536,13 @@ export function toggleShoppingDish(nutrition, mealType, dishId) {
   const list = ensureShoppingList(nutrition);
   const key = shoppingKeyForMeal(mealType);
   const idx = list[key].indexOf(dishId);
-  if (idx === -1) list[key].push(dishId);
+  const nowSelected = idx === -1;
+  if (nowSelected) list[key].push(dishId);
   else list[key].splice(idx, 1);
+  // Für die Woche eingekaufte Gerichte automatisch fixieren, damit sie in
+  // den Tagesvorschlägen erscheinen, ohne dass man sie jeden Tag neu suchen
+  // muss — und beim Abwählen genauso automatisch wieder entfixieren.
+  syncShoppingPin(nutrition, mealType, dishId, nowSelected);
 }
 
 export function toggleShoppingChecked(nutrition, ingredientId) {
@@ -509,6 +552,8 @@ export function toggleShoppingChecked(nutrition, ingredientId) {
 
 export function resetShoppingWeek(nutrition) {
   const list = ensureShoppingList(nutrition);
+  list.lunchDishIds.forEach((id) => syncShoppingPin(nutrition, "lunch", id, false));
+  list.dinnerDishIds.forEach((id) => syncShoppingPin(nutrition, "dinner", id, false));
   list.lunchDishIds = [];
   list.dinnerDishIds = [];
   list.checked = {};
