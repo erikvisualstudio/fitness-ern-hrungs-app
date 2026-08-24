@@ -31,6 +31,31 @@
 
 * { box-sizing: border-box; }
 
+/* Seitenübergänge (View Transitions API, siehe app.js). Ersetzt das
+   Browser-Standard-Kreuzblenden durch einen etwas "app-igeren" leichten
+   Versatz. Wird ignoriert, wo die API nicht unterstützt wird. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+::view-transition-old(root) { animation-name: app-view-out; }
+::view-transition-new(root) { animation-name: app-view-in; }
+@keyframes app-view-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-6px) scale(0.99); }
+}
+@keyframes app-view-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -39,12 +64,45 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-variant-numeric: tabular-nums;
   -webkit-tap-highlight-color: transparent;
+  /* Kein Gummiband-Überscrollen und kein Pull-to-Refresh — in einer
+     installierten App wirkt beides sofort wie "das ist ja nur eine
+     Website", die native App-Analogie kennt das nicht. */
+  overscroll-behavior: none;
 }
 
 body {
   padding-bottom: calc(76px + var(--safe-bottom));
   min-height: 100dvh;
+  overflow-x: hidden;
 }
+
+/* Bedienelemente sollen sich wie App-UI anfühlen, nicht wie Webseiten-Text:
+   kein Auswahl-Rechteck, kein "Ausschneiden/Kopieren"-Kontextmenü bei langem
+   Drücken, kein 300ms-Tap-Delay/Doppeltipp-Zoom. Absichtlich NICHT auf
+   Fließtext (p, .meta etc.) angewendet — Gesundheitsnotizen o.ä. sollen
+   weiterhin markier-/kopierbar bleiben. */
+button,
+.tabbar,
+.topbar,
+label,
+.badge,
+.dish-card,
+.list-item,
+.profile-btn,
+.pin-btn,
+.week-dish-row,
+.shopping-item,
+.mode-toggle .mode-btn,
+.ing-result-item {
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* :hover-Regeln unten unter @media (hover: hover) — sonst bleibt der
+   Hover-Stil auf Touch-Geräten nach dem Antippen oft "kleben" (iOS-typischer
+   Bug), bis irgendwo anders hingetippt wird. Aktives Antippen bekommt
+   stattdessen eigene :active-Zustände (siehe jeweilige Klassen). */
 
 h1, h2, h3 { margin: 0 0 5px; line-height: 1.08; font-weight: 800; }
 h1 { font-size: 1.9rem; letter-spacing: -0.025em; }
@@ -114,9 +172,10 @@ nav.tabbar button {
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  transition: color 150ms ease;
+  transition: color 150ms ease, opacity 100ms ease;
   position: relative;
 }
+nav.tabbar button:active { opacity: 0.55; }
 
 nav.tabbar button .icon { font-size: 1.2rem; transition: transform 150ms ease; }
 nav.tabbar button.active { color: var(--accent); }
@@ -171,8 +230,7 @@ button {
   transition: background 150ms ease, transform 150ms ease, opacity 150ms ease;
   width: 100%;
 }
-.btn:hover { background: var(--accent); color: #fff; }
-.btn:active { transform: scale(0.98); }
+.btn:active { transform: scale(0.97); opacity: 0.9; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-secondary {
@@ -181,10 +239,10 @@ button {
   border: 1px solid var(--border);
   font-weight: 600;
 }
-.btn-secondary:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.btn-secondary:active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
 
 .btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover { background: #b93e33; }
+.btn-danger:active { background: #b93e33; }
 
 .btn-sm { width: auto; padding: 9px 16px; font-size: 0.83rem; border-radius: 8px; }
 
@@ -207,7 +265,7 @@ button {
   text-align: left;
   transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
 }
-.list-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+.list-item:active { border-color: var(--accent); transform: scale(0.98); }
 .list-item .meta { color: var(--text-dim); font-size: 0.82rem; margin-top: 2px; }
 .list-item .chev { color: var(--text-dim); font-size: 1.1rem; }
 
@@ -372,7 +430,7 @@ input[type="checkbox"], input[type="radio"] {
   color: var(--text);
   transition: border-color 150ms ease, transform 150ms ease, background 150ms ease;
 }
-.profile-btn:hover { border-color: var(--accent); background: var(--accent-dim); transform: translateY(-2px); }
+.profile-btn:active { border-color: var(--accent); background: var(--accent-dim); transform: scale(0.98); }
 
 .toast {
   position: fixed;
@@ -430,7 +488,9 @@ textarea {
   font-size: 0.85rem;
   font-weight: 700;
   padding: 6px 0;
+  transition: opacity 100ms ease;
 }
+.link-btn:active { opacity: 0.5; }
 
 /* "Die Zahl ist der Inhalt" — für Kennzahlen, die den ganzen Sinn eines Blocks
    tragen (Blockwoche, Tagesbilanz). Bewusst groß statt gleichförmig mit dem Rest. */
@@ -464,12 +524,13 @@ textarea {
   font-size: 0.78rem;
   font-weight: 700;
   padding: 7px 12px;
-  transition: background 150ms ease, color 150ms ease;
+  transition: background 150ms ease, color 150ms ease, opacity 100ms ease;
 }
 .mode-toggle .mode-btn.active {
   background: var(--text);
   color: var(--bg);
 }
+.mode-toggle .mode-btn:active { opacity: 0.65; }
 
 .dish-grid {
   display: flex;
@@ -486,9 +547,9 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 13px 15px;
-  transition: border-color 150ms ease, background 150ms ease;
+  transition: border-color 150ms ease, background 150ms ease, transform 100ms ease;
 }
-.dish-card:hover { border-color: var(--accent); }
+.dish-card:active { border-color: var(--accent); transform: scale(0.98); }
 .dish-card.selected {
   border-color: var(--accent);
   background: var(--accent-dim);
@@ -517,9 +578,9 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 999px;
   cursor: pointer;
-  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease, transform 100ms ease;
 }
-.pin-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pin-btn:active { border-color: var(--accent); color: var(--accent); transform: scale(0.94); }
 
 .dish-search-bar { margin: 8px 0 10px; }
 .dish-search-input {
@@ -541,8 +602,10 @@ textarea {
   border-bottom: 1px solid var(--border);
   font-size: 0.85rem;
   cursor: pointer;
+  transition: background 100ms ease;
 }
 .week-dish-row:last-child { border-bottom: none; }
+.week-dish-row:active { background: var(--accent-dim); }
 .week-dish-row input[type="checkbox"] { flex-shrink: 0; }
 
 .shopping-category { margin-top: 14px; }
@@ -562,8 +625,10 @@ textarea {
   padding: 9px 2px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
+  transition: background 100ms ease;
 }
 .shopping-item:last-child { border-bottom: none; }
+.shopping-item:active { background: var(--accent-dim); }
 .shopping-item-name { flex: 1; font-size: 0.9rem; }
 .shopping-item-amount { font-size: 0.82rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .shopping-item.checked .shopping-item-name,
@@ -640,9 +705,10 @@ select:disabled {
   justify-content: space-between;
   gap: 8px;
   border-bottom: 1px solid var(--border);
+  transition: background 100ms ease;
 }
 .ing-result-item:last-child { border-bottom: none; }
-.ing-result-item:hover { background: var(--accent-dim); }
+.ing-result-item:active { background: var(--accent-dim); }
 .ing-result-item .meta { font-size: 0.72rem; flex-shrink: 0; }
 .ing-result-new { color: var(--accent); font-weight: 700; }
 .ingredient-row input[type="number"] {
@@ -675,4 +741,18 @@ select:disabled {
   text-transform: none;
   letter-spacing: normal;
   color: var(--text);
+}
+
+/* Hover-Feedback nur für echte Zeiger-Geräte (Maus/Trackpad) — auf Touch
+   würde ein :hover nach dem Antippen sonst "kleben" bleiben, bis woanders
+   hingetippt wird. Touch bekommt stattdessen die :active-Zustände oben. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { background: var(--accent); color: #fff; }
+  .btn-secondary:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+  .btn-danger:hover { background: #b93e33; }
+  .list-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .profile-btn:hover { border-color: var(--accent); background: var(--accent-dim); transform: translateY(-2px); }
+  .dish-card:hover { border-color: var(--accent); }
+  .pin-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ing-result-item:hover { background: var(--accent-dim); }
 }

@@ -87,7 +87,7 @@ function activeTabFor(routeName) {
   return null;
 }
 
-function render() {
+function renderNow() {
   const { name, params } = parseRoute();
   const currentUserId = db.getCurrentUserId();
 
@@ -118,6 +118,44 @@ function render() {
   window.scrollTo(0, 0);
 }
 
+let firstRender = true;
+let currentTransition = null;
+
+// Seitenwechsel bekommen einen sanften Übergang statt eines harten Schnitts
+// — genau das Detail, das eine Web-App optisch von einer echten App
+// unterscheidet. Fällt bei fehlender Browser-Unterstützung automatisch auf
+// den harten Wechsel zurück; der allererste Seitenaufbau bleibt bewusst
+// ohne Übergang (App-Start soll sofort da sein, nicht erst einblenden).
+//
+// Läuft bereits ein Übergang (z. B. schneller Doppel-Tap oder ein
+// Profilwechsel, der sofort weiterleitet), wird er explizit übersprungen
+// statt zu überlappen — sonst bricht der Browser ihn selbst ab und wirft
+// einen unbehandelten Promise-Fehler.
+function render() {
+  if (firstRender || !document.startViewTransition) {
+    firstRender = false;
+    renderNow();
+    return;
+  }
+  if (currentTransition) currentTransition.skipTransition();
+  try {
+    currentTransition = document.startViewTransition(() => renderNow());
+    // Die View-Transition-API hat mehrere interne Promises (ready,
+    // updateCallbackDone, finished) — ein übersprungener/abgebrochener
+    // Übergang lässt "ready" ablehnen, auch wenn "finished" trotzdem noch
+    // erfüllt wird. Alle drei müssen abgefangen werden, sonst landet eine
+    // abgelehnte Promise unbehandelt in der Konsole.
+    currentTransition.ready.catch(() => {});
+    currentTransition.updateCallbackDone.catch(() => {});
+    currentTransition.finished.catch(() => {}).finally(() => {
+      currentTransition = null;
+    });
+  } catch (err) {
+    currentTransition = null;
+    renderNow();
+  }
+}
+
 window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", render);
 if (document.readyState !== "loading") render();
@@ -125,8 +163,9 @@ if (document.readyState !== "loading") render();
 // Wenn ein anderes Gerät die Ernährungsdaten aktualisiert hat, nur neu rendern
 // wenn die Ernährungsseite gerade offen ist — sonst würden z. B. gerade
 // ausgefüllte Formulare auf anderen Seiten mitten im Tippen zurückgesetzt.
+// Ohne Seitenübergang, da das im Hintergrund passiert (kein Nutzer-Klick).
 window.addEventListener("app:nutrition-synced", () => {
-  if (parseRoute().name === "nutrition") render();
+  if (parseRoute().name === "nutrition") renderNow();
 });
 
 if ("serviceWorker" in navigator) {
