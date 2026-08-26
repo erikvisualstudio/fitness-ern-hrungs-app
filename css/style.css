@@ -98,7 +98,8 @@ label,
 .dish-card,
 .list-item,
 .profile-btn,
-.pin-btn,
+.pin-btn-icon,
+.expand-toggle,
 .week-dish-row,
 .shopping-item,
 .mode-toggle .mode-btn,
@@ -674,27 +675,42 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 .dish-name { font-weight: 700; font-size: 0.93rem; letter-spacing: -0.005em; }
-.dish-desc { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px; }
-.dish-macro { font-size: 0.82rem; margin-top: 2px; }
+.dish-desc { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 4px; }
 
-.pin-btn {
-  display: inline-block;
-  margin-top: 9px;
-  padding: 4px 10px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: border-color 150ms ease, color 150ms ease, background 150ms ease, transform 100ms ease;
+/* Kompakte Karte: Name+Badges, dann eine Zeile mit Makros + Fixieren/
+   Aufklappen-Icons — Zutatenliste steckt in .dish-details und ist per
+   default versteckt (hidden-Attribut), statt immer die ganze Karte zu füllen. */
+.dish-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
-.pin-btn:active { border-color: var(--accent-text); color: var(--accent-text); transform: scale(0.94); }
+.dish-macro-group { display: flex; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.dish-macro { font-size: 0.8rem; white-space: nowrap; }
+.dish-card-controls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.dish-details { margin-top: 8px; }
+
+.pin-btn-icon,
+.expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease, transform 100ms ease;
+}
+.pin-btn-icon:active,
+.expand-toggle:active { transform: scale(0.9); background: var(--accent-dim); }
+.pin-btn-icon.active { color: var(--accent-text); }
+.expand-toggle svg { transition: transform 150ms ease; }
+.expand-toggle.expanded svg { transform: rotate(90deg); }
 
 .dish-search-bar { margin: 8px 0 10px; }
 .search-input-wrap { position: relative; }
@@ -772,11 +788,6 @@ select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   background: var(--surface-2);
-}
-.pin-btn.active {
-  color: var(--accent-text);
-  border-color: var(--accent-text);
-  background: var(--accent-dim);
 }
 
 .actual-row {
@@ -876,7 +887,8 @@ select:disabled {
   .list-item:hover { border-color: var(--accent); transform: translateY(-1px); }
   .profile-btn:hover { border-color: var(--accent); background: var(--accent-dim); transform: translateY(-2px); }
   .dish-card:hover { border-color: var(--accent); }
-  .pin-btn:hover { border-color: var(--accent-text); color: var(--accent-text); }
+  .pin-btn-icon:hover,
+  .expand-toggle:hover { color: var(--accent-text); background: var(--accent-dim); }
   .ing-result-item:hover { background: var(--accent-dim); }
   .muscle-chip:hover { border-color: var(--accent); }
   .cal-cell:not(:disabled):hover { border-color: var(--accent); }

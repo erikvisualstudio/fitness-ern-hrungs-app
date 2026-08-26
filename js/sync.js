@@ -9,11 +9,17 @@
 // und der andere geht verloren.
 //
 // Ausnahme: Fixierungen (pins) werden gezielt personenweise gemerged (siehe
-// mergePinsByPerson in nutrition.js) statt komplett überschrieben — sowohl
-// beim Empfangen (db.applyRemoteNutrition) als auch HIER beim Hochladen, denn
-// sonst könnte ein Gerät mit einem veralteten lokalen Stand für die ANDERE
-// Person beim eigenen Speichern deren gerade erst gesetzten Pin in der Cloud
-// wieder zurücksetzen, obwohl nur die eigene Fixierung geändert wurde.
+// mergePinsByPerson in nutrition.js) — UND das beim Hochladen per Firestore-
+// TRANSAKTION statt nur anhand eines zwischengespeicherten "letzten bekannten"
+// Standes. Grund: eine reine Zwischenspeicher-Lösung (frühere Version dieser
+// Datei) schützt nur gegen einen Push mit einem BEWUSST veralteten eigenen
+// Wert — nicht aber davor, dass das eigene Gerät den Cloud-Stand des ANDEREN
+// Geräts noch gar nicht empfangen hat (Listener-Verzögerung), dann selbst
+// speichert und dabei die gerade erst gesetzte Fixierung der anderen Person
+// überschreibt, weil der eigene "letzte bekannte Stand" ebenfalls veraltet
+// war. Eine Transaktion liest den ECHTEN aktuellen Server-Stand im Moment
+// des Schreibens, nicht einen zwischengespeicherten — das schließt die Lücke
+// unabhängig von Netzwerk-Timing.
 //
 // Läuft komplett optional im Hintergrund: ohne Internet/Firebase bleibt die App wie
 // bisher rein lokal nutzbar, initSync() blockiert das erste Rendern nicht.
@@ -34,10 +40,9 @@ const HOUSEHOLD_ID = "erik-nele";
 const PUSH_DEBOUNCE_MS = 800;
 
 let docRef = null;
-let setDocFn = null;
+let runTransactionFn = null;
 let applyingRemote = false;
 let pushTimer = null;
-let lastKnownRemotePins = null;
 
 function setStatus(status) {
   window.dispatchEvent(new CustomEvent("app:sync-status", { detail: { status } }));
@@ -46,7 +51,7 @@ function setStatus(status) {
 export async function initSync() {
   setStatus("connecting");
   try {
-    const [{ initializeApp }, { getAuth, signInAnonymously }, { getFirestore, doc, onSnapshot, setDoc }] = await Promise.all([
+    const [{ initializeApp }, { getAuth, signInAnonymously }, { getFirestore, doc, onSnapshot, runTransaction }] = await Promise.all([
       import(`https://www.gstatic.com/firebasejs/${SDK_VERSION}/firebase-app.js`),
       import(`https://www.gstatic.com/firebasejs/${SDK_VERSION}/firebase-auth.js`),
       import(`https://www.gstatic.com/firebasejs/${SDK_VERSION}/firebase-firestore.js`),
@@ -58,7 +63,7 @@ export async function initSync() {
     await signInAnonymously(auth);
 
     docRef = doc(firestore, "households", HOUSEHOLD_ID);
-    setDocFn = setDoc;
+    runTransactionFn = (updater) => runTransaction(firestore, updater);
 
     onSnapshot(
       docRef,
@@ -69,7 +74,6 @@ export async function initSync() {
           pushNow(db.getNutritionState());
           return;
         }
-        if (remote.nutrition.pins) lastKnownRemotePins = remote.nutrition.pins;
         const local = db.getNutritionState();
         if ((remote.nutrition.updatedAt || 0) > (local.updatedAt || 0)) {
           applyingRemote = true;
@@ -95,11 +99,22 @@ export async function initSync() {
   }
 }
 
-function pushNow(nutrition) {
-  if (!docRef || !setDocFn) return;
-  const payload = lastKnownRemotePins && nutrition.pins ? { ...nutrition, pins: mergePinsByPerson(nutrition.pins, lastKnownRemotePins) } : nutrition;
-  setDocFn(docRef, { nutrition: payload }).catch((err) => {
+async function pushNow(nutrition) {
+  if (!docRef || !runTransactionFn) return;
+  try {
+    await runTransactionFn(async (transaction) => {
+      const snap = await transaction.get(docRef);
+      const remoteData = snap.exists() ? snap.data() : null;
+      const remoteNutrition = remoteData ? remoteData.nutrition : null;
+
+      const payload = { ...nutrition };
+      if (remoteNutrition && remoteNutrition.pins && payload.pins) {
+        payload.pins = mergePinsByPerson(payload.pins, remoteNutrition.pins);
+      }
+      transaction.set(docRef, { nutrition: payload });
+    });
+  } catch (err) {
     console.warn("Konnte Ernährungsdaten nicht synchronisieren:", err);
     setStatus("offline");
-  });
+  }
 }

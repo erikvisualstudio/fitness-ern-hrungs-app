@@ -29,6 +29,12 @@ import { escapeHtml, fmtNum } from "../util.js";
 import { icons } from "../icons.js";
 
 let selectedDate = null;
+// Welche Gerichte-Karten gerade aufgeklappt sind (Zutaten/Makros sichtbar) —
+// bleibt über Re-Renders innerhalb der Sitzung erhalten, wie selectedDate.
+const expandedCards = new Set();
+function cardKey(mealType, party, dishId) {
+  return `${mealType}|${party}|${dishId}`;
+}
 let syncStatus = "connecting";
 
 const SYNC_STATUS = {
@@ -588,6 +594,23 @@ function bindDishCardInteractions(card, nutritionState, root, ctx) {
       render(root, ctx);
     });
   }
+  // Aufklappen zeigt Zutaten/Details — bewusst OHNE render(), damit es sich
+  // sofort anfühlt und der Rest der Seite (z. B. gerade offene Suche) nicht
+  // mit zurückgesetzt wird. expandedCards merkt sich den Zustand trotzdem,
+  // falls später doch neu gerendert wird (z. B. nach einer Auswahl).
+  const expandBtn = card.querySelector("[data-expand-toggle]");
+  if (expandBtn) {
+    expandBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const key = cardKey(card.dataset.meal, card.dataset.party, card.dataset.dishId);
+      const nowExpanded = !expandedCards.has(key);
+      if (nowExpanded) expandedCards.add(key);
+      else expandedCards.delete(key);
+      const details = card.querySelector(".dish-details");
+      if (details) details.hidden = !nowExpanded;
+      expandBtn.classList.toggle("expanded", nowExpanded);
+    });
+  }
 }
 
 function buildDishCard(dish, party, mealType, selected, pinned, ingredientsDB) {
@@ -601,28 +624,32 @@ function buildDishCard(dish, party, mealType, selected, pinned, ingredientsDB) {
   const badges = dish.categories.map((c) => `<span class="badge ${categoryBadgeClass(c)}">${CATEGORY_LABELS[c]}</span>`).join(" ");
 
   const nele = portionFor(dish, "nele", ingredientsDB);
-  let portionHtml;
+  let macroHtml, descHtml;
   if (party === "shared") {
     const erik = portionFor(dish, "erik", ingredientsDB);
-    portionHtml = `
-      <div class="dish-macro">Nele: <strong>${fmtNum(nele.kcal)} kcal</strong> · ${fmtNum(nele.protein)} g P</div>
-      <div class="dish-macro">Erik: <strong>${fmtNum(erik.kcal)} kcal</strong> · ${fmtNum(erik.protein)} g P${erik.addDescription ? ` <span class="meta">(${escapeHtml(erik.addDescription)})</span>` : ""}</div>
-    `;
+    macroHtml = `<span class="dish-macro">N: <strong>${fmtNum(nele.kcal)} kcal</strong> · ${fmtNum(nele.protein)} g P</span><span class="dish-macro">E: <strong>${fmtNum(erik.kcal)} kcal</strong> · ${fmtNum(erik.protein)} g P</span>`;
+    descHtml = `<div class="dish-desc">${escapeHtml(nele.description)}</div>${erik.addDescription ? `<div class="dish-desc">Erik-Zusatz: ${escapeHtml(erik.addDescription)}</div>` : ""}`;
   } else {
     const p = portionFor(dish, party, ingredientsDB);
-    portionHtml = `<div class="dish-macro"><strong>${fmtNum(p.kcal)} kcal</strong> · ${fmtNum(p.protein)} g P${p.addDescription ? `<br/><span class="meta">${escapeHtml(p.addDescription)}</span>` : ""}</div>`;
+    macroHtml = `<span class="dish-macro"><strong>${fmtNum(p.kcal)} kcal</strong> · ${fmtNum(p.protein)} g P</span>`;
+    descHtml = `<div class="dish-desc">${escapeHtml(nele.description)}</div>${p.addDescription ? `<div class="dish-desc">Zusatz: ${escapeHtml(p.addDescription)}</div>` : ""}`;
   }
+
+  const expanded = expandedCards.has(cardKey(mealType, party, dish.id));
 
   card.innerHTML = `
     <div class="dish-card-header">
       <span class="dish-name">${escapeHtml(dish.name)}</span>
       <span>${badges}</span>
     </div>
-    <div class="dish-desc">${escapeHtml(nele.description)}</div>
-    ${portionHtml}
-    <span class="pin-btn ${pinned ? "active" : ""}" data-pin-toggle data-dish-id="${dish.id}" data-party="${party}" data-meal="${mealType}">
-      <span class="status-inline">${icons.pin(13)}${pinned ? "Fixiert — immer vorschlagen" : "Fixieren"}</span>
-    </span>
+    <div class="dish-card-row">
+      <span class="dish-macro-group">${macroHtml}</span>
+      <span class="dish-card-controls">
+        <span class="pin-btn-icon ${pinned ? "active" : ""}" data-pin-toggle data-dish-id="${dish.id}" data-party="${party}" data-meal="${mealType}" title="${pinned ? "Fixiert — immer vorschlagen" : "Fixieren"}">${icons.pin(16)}</span>
+        <span class="expand-toggle ${expanded ? "expanded" : ""}" data-expand-toggle title="Details">${icons.chevronRight(16)}</span>
+      </span>
+    </div>
+    <div class="dish-details" ${expanded ? "" : "hidden"}>${descHtml}</div>
   `;
   return card;
 }
