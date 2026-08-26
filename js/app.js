@@ -79,6 +79,13 @@ function renderChrome(routeName, title, showBack) {
   });
 }
 
+function dayTitleFor(dayIdRaw) {
+  const dayId = decodeURIComponent(dayIdRaw || "");
+  const days = db.getWorkoutDays(db.getCurrentUserId());
+  const d = days.find((x) => x.id === dayId);
+  return (d && d.name) || dayId || "Trainingstag";
+}
+
 function activeTabFor(routeName) {
   if (routeName === "dashboard" || routeName === "log") return "dashboard";
   if (routeName === "nutrition") return "nutrition";
@@ -110,7 +117,14 @@ function renderNow() {
     shopping: { view: shoppingView, title: "Einkaufsliste", back: false },
     history: {
       view: historyView,
-      title: params[0] === "muscle" ? params[1] || "Muskelgruppe" : params[0] ? "Übung" : "Verlauf",
+      title:
+        params[0] === "muscle"
+          ? decodeURIComponent(params[1] || "") || "Muskelgruppe"
+          : params[0] === "day"
+          ? dayTitleFor(params[1])
+          : params[0]
+          ? "Übung"
+          : "Verlauf",
       back: Boolean(params[0]),
     },
     settings: { view: settingsView, title: "Einstellungen", back: false },

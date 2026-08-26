@@ -10,6 +10,8 @@ function safetyBannerHtml(note) {
 export function mount(root, { navigate, params }) {
   if (params[0] === "muscle") {
     mountMuscleGroup(root, params[1], navigate);
+  } else if (params[0] === "day") {
+    mountDaySessions(root, params[1], navigate);
   } else if (params[0]) {
     mountDetail(root, params[0], navigate);
   } else {
@@ -31,28 +33,51 @@ function mountList(root, navigate) {
   const userId = db.getCurrentUserId();
   const exercises = db.getExercises(userId);
   const days = db.getWorkoutDays(userId);
-  const sessions = db.getSessions(userId).slice().reverse().slice(0, 12);
+  const allSessions = db.getSessions(userId);
   const groups = muscleGroupsFor(exercises);
   const groupNames = [...groups.keys()].sort((a, b) => a.localeCompare(b, "de"));
+
+  // Sessions nach Trainingstag gruppieren, damit "Tag 1" bis "Tag 5" jeweils
+  // nur EINE Karte ergeben (statt sich mit jeder geloggten Session weiter
+  // aufzustapeln). Die einzelnen Sessions eines Tages sieht man erst beim
+  // Aufklappen (Klick auf die Karte → mountDaySessions).
+  const sessionsByDay = new Map();
+  allSessions.forEach((s) => {
+    if (!sessionsByDay.has(s.dayId)) sessionsByDay.set(s.dayId, []);
+    sessionsByDay.get(s.dayId).push(s);
+  });
+  const dayCards = [];
+  days.forEach((d) => {
+    if (sessionsByDay.has(d.id)) {
+      dayCards.push({ dayId: d.id, name: d.name, sessions: sessionsByDay.get(d.id) });
+      sessionsByDay.delete(d.id);
+    }
+  });
+  // Sessions von Trainingstagen, die es aktuell nicht mehr gibt (z.B. gelöscht),
+  // trotzdem anzeigen statt sie unter den Tisch fallen zu lassen.
+  sessionsByDay.forEach((sessions, dayId) => {
+    dayCards.push({ dayId, name: dayId, sessions });
+  });
 
   root.innerHTML = `
     <h1>Verlauf</h1>
 
-    <div class="section-title">Letzte Sessions</div>
+    <div class="section-title">Trainingstage</div>
     ${
-      sessions.length
-        ? `<div class="list" id="recent-sessions">
-          ${sessions
-            .map(
-              (s) => `
-            <div class="list-item">
+      dayCards.length
+        ? `<div class="list" id="day-cards">
+          ${dayCards
+            .map((dc) => {
+              const latest = dc.sessions[dc.sessions.length - 1];
+              return `
+            <button class="list-item" data-open-day="${escapeHtml(dc.dayId)}">
               <div>
-                <div><strong>${escapeHtml(dayName(days, s.dayId))}</strong></div>
-                <div class="meta">${formatDateDE(s.date)} · ${Object.keys(s.sets).length} Übung(en)</div>
+                <div><strong>${escapeHtml(dc.name)}</strong></div>
+                <div class="meta">${dc.sessions.length} Session${dc.sessions.length === 1 ? "" : "s"} · zuletzt ${formatDateDE(latest.date)}</div>
               </div>
-              <button class="link-btn" data-del-session="${s.id}" style="color: var(--danger);">Löschen</button>
-            </div>`
-            )
+              <span class="chev">›</span>
+            </button>`;
+            })
             .join("")}
         </div>`
         : `<p>Noch keine Sessions geloggt.</p>`
@@ -90,12 +115,51 @@ function mountList(root, navigate) {
     btn.addEventListener("click", () => navigate(`#/history/muscle/${encodeURIComponent(btn.dataset.muscle)}`));
   });
 
+  root.querySelectorAll("[data-open-day]").forEach((btn) => {
+    btn.addEventListener("click", () => navigate(`#/history/day/${encodeURIComponent(btn.dataset.openDay)}`));
+  });
+}
+
+function mountDaySessions(root, dayIdRaw, navigate) {
+  const dayId = decodeURIComponent(dayIdRaw || "");
+  const userId = db.getCurrentUserId();
+  const days = db.getWorkoutDays(userId);
+  const sessions = db
+    .getSessions(userId)
+    .filter((s) => s.dayId === dayId)
+    .slice()
+    .reverse();
+  const name = dayName(days, dayId);
+
+  if (sessions.length === 0) {
+    root.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Keine Sessions für ${escapeHtml(name)}.</p></div>`;
+    return;
+  }
+
+  root.innerHTML = `
+    <h1>${escapeHtml(name)}</h1>
+    <div class="list" id="day-sessions">
+      ${sessions
+        .map(
+          (s) => `
+        <div class="list-item">
+          <div>
+            <div><strong>${formatDateDE(s.date)}</strong></div>
+            <div class="meta">${Object.keys(s.sets).length} Übung(en)</div>
+          </div>
+          <button class="link-btn" data-del-session="${s.id}" style="color: var(--danger);">Löschen</button>
+        </div>`
+        )
+        .join("")}
+    </div>
+  `;
+
   root.querySelectorAll("[data-del-session]").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (!confirm("Diese Session wirklich löschen?")) return;
       db.deleteSession(userId, btn.dataset.delSession);
       showToast("Session gelöscht");
-      mountList(root, navigate);
+      mountDaySessions(root, dayIdRaw, navigate);
     });
   });
 }
