@@ -1,29 +1,29 @@
-// Cloud-Sync für den Ernährungs-Datenstand (NUR "Ernährung", nicht Fitness) über
-// Firebase Firestore, damit Erik und Nele auf getrennten Geräten denselben
-// Mahlzeitenplan und gegenseitig die Nährwert-Scores sehen.
+// Cloud-Sync über Firebase Firestore, EIN gemeinsames Haushalts-Dokument mit
+// zwei unabhängigen Bereichen:
 //
-// Bewusst einfach gehalten: EIN gemeinsames Haushalts-Dokument, "Last write wins"
-// anhand von state.nutrition.updatedAt (kein Feld-für-Feld-Merge). Für zwei
-// Personen, die selten exakt zur selben Sekunde etwas ändern, ist das ausreichend
-// robust — bei einem echten Gleichzeitig-Konflikt gewinnt der spätere Schreibzugriff
-// und der andere geht verloren.
+// - "nutrition": gemeinsamer Ernährungs-/Mahlzeitenplan (siehe unten), von
+//   beiden Geräten gleichermaßen bearbeitet.
+// - "fitness.<person>": Trainingsdaten JE Person — dient primär als Backup/
+//   Wiederherstellung (z. B. nach gelöschtem Browser-Cache), nicht als
+//   Kollaborationsfläche, da jede Person nur ihre eigenen Trainingsdaten auf
+//   ihrem eigenen Gerät schreibt.
 //
-// Ausnahme: Fixierungen (pins) werden gezielt personenweise gemerged (siehe
-// mergePinsByPerson in nutrition.js) — UND das beim Hochladen per Firestore-
-// TRANSAKTION statt nur anhand eines zwischengespeicherten "letzten bekannten"
-// Standes. Grund: eine reine Zwischenspeicher-Lösung (frühere Version dieser
-// Datei) schützt nur gegen einen Push mit einem BEWUSST veralteten eigenen
-// Wert — nicht aber davor, dass das eigene Gerät den Cloud-Stand des ANDEREN
-// Geräts noch gar nicht empfangen hat (Listener-Verzögerung), dann selbst
-// speichert und dabei die gerade erst gesetzte Fixierung der anderen Person
-// überschreibt, weil der eigene "letzte bekannte Stand" ebenfalls veraltet
-// war. Eine Transaktion liest den ECHTEN aktuellen Server-Stand im Moment
-// des Schreibens, nicht einen zwischengespeicherten — das schließt die Lücke
-// unabhängig von Netzwerk-Timing.
+// Beide Bereiche werden per Firestore-TRANSAKTION geschrieben (liest den
+// echten aktuellen Server-Stand im Moment des Schreibens) UND mit
+// {merge: true} — sonst würde jeder Push den kompletten Dokumentinhalt
+// ersetzen und damit den jeweils ANDEREN Bereich (nutrition bzw. fitness)
+// im selben Dokument löschen.
+//
+// Nährwert-"Last write wins" anhand von state.nutrition.updatedAt (kein
+// Feld-für-Feld-Merge) — Ausnahme: Fixierungen (pins) werden gezielt
+// personenweise gemerged (siehe mergePinsByPerson in nutrition.js), weil
+// hier zwei Personen wirklich gleichzeitig denselben Datensatz bearbeiten.
+// Für Training genügt ein einfacher Zeitstempel-Vergleich PRO PERSON, da
+// niemand die Trainingsdaten einer anderen Person schreibt.
 //
 // Läuft komplett optional im Hintergrund: ohne Internet/Firebase bleibt die App wie
 // bisher rein lokal nutzbar, initSync() blockiert das erste Rendern nicht.
-import { db, onNutritionSaved } from "./db.js";
+import { db, onNutritionSaved, onFitnessSaved } from "./db.js";
 import { mergePinsByPerson } from "./nutrition.js";
 
 const FIREBASE_CONFIG = {
@@ -38,11 +38,13 @@ const FIREBASE_CONFIG = {
 const SDK_VERSION = "10.14.1";
 const HOUSEHOLD_ID = "erik-nele";
 const PUSH_DEBOUNCE_MS = 800;
+const FITNESS_PERSONS = ["erik", "nele"];
 
 let docRef = null;
 let runTransactionFn = null;
 let applyingRemote = false;
 let pushTimer = null;
+let fitnessPushTimers = {};
 
 function setStatus(status) {
   window.dispatchEvent(new CustomEvent("app:sync-status", { detail: { status } }));
@@ -69,18 +71,36 @@ export async function initSync() {
       docRef,
       (snap) => {
         setStatus("connected");
-        const remote = snap.data();
+        const remote = snap.data() || null;
+
+        // Ernährung
         if (!remote || !remote.nutrition) {
           pushNow(db.getNutritionState());
-          return;
+        } else {
+          const local = db.getNutritionState();
+          if ((remote.nutrition.updatedAt || 0) > (local.updatedAt || 0)) {
+            applyingRemote = true;
+            db.applyRemoteNutrition(remote.nutrition);
+            applyingRemote = false;
+            window.dispatchEvent(new CustomEvent("app:nutrition-synced"));
+          }
         }
-        const local = db.getNutritionState();
-        if ((remote.nutrition.updatedAt || 0) > (local.updatedAt || 0)) {
-          applyingRemote = true;
-          db.applyRemoteNutrition(remote.nutrition);
-          applyingRemote = false;
-          window.dispatchEvent(new CustomEvent("app:nutrition-synced"));
-        }
+
+        // Training — pro Person unabhängig, siehe Kommentar oben.
+        FITNESS_PERSONS.forEach((person) => {
+          const remoteFitness = remote && remote.fitness && remote.fitness[person];
+          if (!remoteFitness) {
+            pushFitnessNow(person, db.getFitnessState(person));
+            return;
+          }
+          const localFitness = db.getFitnessState(person);
+          if ((remoteFitness.updatedAt || 0) > (localFitness.updatedAt || 0)) {
+            applyingRemote = true;
+            db.applyRemoteFitness(person, remoteFitness);
+            applyingRemote = false;
+            window.dispatchEvent(new CustomEvent("app:fitness-synced", { detail: { userId: person } }));
+          }
+        });
       },
       (err) => {
         console.warn("Firestore-Sync-Fehler:", err);
@@ -92,6 +112,12 @@ export async function initSync() {
       if (applyingRemote) return;
       clearTimeout(pushTimer);
       pushTimer = setTimeout(() => pushNow(nutrition), PUSH_DEBOUNCE_MS);
+    });
+
+    onFitnessSaved((userId, fitness) => {
+      if (applyingRemote) return;
+      clearTimeout(fitnessPushTimers[userId]);
+      fitnessPushTimers[userId] = setTimeout(() => pushFitnessNow(userId, fitness), PUSH_DEBOUNCE_MS);
     });
   } catch (err) {
     console.warn("Cloud-Sync nicht verfügbar (offline oder Firebase nicht erreichbar):", err);
@@ -111,10 +137,30 @@ async function pushNow(nutrition) {
       if (remoteNutrition && remoteNutrition.pins && payload.pins) {
         payload.pins = mergePinsByPerson(payload.pins, remoteNutrition.pins);
       }
-      transaction.set(docRef, { nutrition: payload });
+      transaction.set(docRef, { nutrition: payload }, { merge: true });
     });
   } catch (err) {
     console.warn("Konnte Ernährungsdaten nicht synchronisieren:", err);
+    setStatus("offline");
+  }
+}
+
+// Schreibt NUR die Trainingsdaten der übergebenen Person. Der zuvor per
+// Transaktion frisch gelesene Cloud-Stand der jeweils ANDEREN Person wird
+// unverändert übernommen (nicht einfach per Firestore-merge dem Zufall
+// überlassen, sondern explizit hier zusammengesetzt) — so kann ein Push von
+// Erik niemals Neles Trainingsdaten im selben Dokument überschreiben.
+async function pushFitnessNow(userId, fitness) {
+  if (!docRef || !runTransactionFn) return;
+  try {
+    await runTransactionFn(async (transaction) => {
+      const snap = await transaction.get(docRef);
+      const remoteData = snap.exists() ? snap.data() : null;
+      const remoteFitness = (remoteData && remoteData.fitness) || {};
+      transaction.set(docRef, { fitness: { ...remoteFitness, [userId]: fitness } }, { merge: true });
+    });
+  } catch (err) {
+    console.warn("Konnte Trainingsdaten nicht synchronisieren:", err);
     setStatus("offline");
   }
 }

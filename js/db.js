@@ -73,6 +73,14 @@ function migrate(state) {
     changed = true;
   }
 
+  // Zeitstempel für die Cloud-Sicherung der Trainingsdaten (siehe sync.js) —
+  // pro Person, damit ein Gerät weiß, ob sein lokaler Stand oder der
+  // Cloud-Stand für DIESE Person aktueller ist.
+  if (!state.fitnessUpdatedAt) {
+    state.fitnessUpdatedAt = { erik: 0, nele: 0 };
+    changed = true;
+  }
+
   // Pausetage (Kalenderansicht im Dashboard) kamen später dazu.
   if (!state.restDays) {
     state.restDays = { erik: [], nele: [] };
@@ -252,12 +260,37 @@ function save(state) {
 
 let state = load();
 
-// Cloud-Sync (js/sync.js) hängt sich hier ein, um lokale Ernährungs-Änderungen zu
-// pushen, ohne dass db.js selbst etwas von Firebase wissen muss.
+// Cloud-Sync (js/sync.js) hängt sich hier ein, um lokale Ernährungs- bzw.
+// Trainings-Änderungen zu pushen, ohne dass db.js selbst etwas von Firebase
+// wissen muss.
 let nutritionSaveListeners = [];
 export function onNutritionSaved(cb) {
   nutritionSaveListeners.push(cb);
 }
+
+let fitnessSaveListeners = [];
+export function onFitnessSaved(cb) {
+  fitnessSaveListeners.push(cb);
+}
+
+// Nur diese Felder einer Übung sind vom Nutzer kalibrierte Werte (Settings-
+// Seite) — Name/Typ/Muskelgruppe/ID etc. kommen immer aus dem aktuellen
+// Seed/Migrationsstand (Code), NIE aus der Cloud-Sicherung. So kann ein
+// Update an den Übungsdefinitionen (neue Felder, umbenannte Übungen) nicht
+// von einem älteren Cloud-Snapshot rückgängig gemacht werden — nur die
+// tatsächlich vom Nutzer gesetzten Kalibrierungswerte werden gemerged.
+const EXERCISE_SETTING_FIELDS = [
+  "startLoad",
+  "loadStep",
+  "cap",
+  "repMin",
+  "repMax",
+  "bandLevel",
+  "targetVolume",
+  "incrementAmount",
+  "startWeight",
+  "safetyNote",
+];
 
 export const db = {
   raw() {
@@ -307,7 +340,7 @@ export const db = {
     const ex = this.getExercise(userId, exerciseId);
     if (!ex) return;
     Object.assign(ex, patch);
-    save(state);
+    this.bumpFitnessUpdatedAt(userId);
   },
 
   getSessions(userId) {
@@ -321,12 +354,12 @@ export const db = {
   addSession(userId, session) {
     if (!state.sessionLogs[userId]) state.sessionLogs[userId] = [];
     state.sessionLogs[userId].push(session);
-    save(state);
+    this.bumpFitnessUpdatedAt(userId);
   },
 
   deleteSession(userId, sessionId) {
     state.sessionLogs[userId] = (state.sessionLogs[userId] || []).filter((s) => s.id !== sessionId);
-    save(state);
+    this.bumpFitnessUpdatedAt(userId);
   },
 
   // --- Zwischengespeicherte, noch nicht abgeschlossene Trainingseinheiten ---
@@ -388,7 +421,7 @@ export const db = {
     const idx = arr.indexOf(dateISO);
     if (idx === -1) arr.push(dateISO);
     else arr.splice(idx, 1);
-    save(state);
+    this.bumpFitnessUpdatedAt(userId);
   },
 
   getBlockStartDate(userId) {
@@ -397,6 +430,64 @@ export const db = {
 
   setBlockStartDate(userId, isoDate) {
     state.blockStart[userId] = isoDate;
+    this.bumpFitnessUpdatedAt(userId);
+  },
+
+  // --- Training in die Cloud sichern (Backup/Wiederherstellung) ---
+  // Trainingsdaten sind — anders als Ernährung — nicht wirklich "geteilt"
+  // (jede Person trainiert für sich), daher genügt hier ein einfacher
+  // Zeitstempel-Vergleich pro Person statt eines Feld-für-Feld-Merges: jedes
+  // Gerät schreibt ohnehin nur die Trainingsdaten der Person, die gerade
+  // eingeloggt ist. Der Zweck ist in erster Linie Wiederherstellung nach
+  // Datenverlust (z. B. gelöschter Browser-Cache), nicht Kollaboration.
+  bumpFitnessUpdatedAt(userId) {
+    if (!state.fitnessUpdatedAt) state.fitnessUpdatedAt = {};
+    state.fitnessUpdatedAt[userId] = Date.now();
+    save(state);
+    fitnessSaveListeners.forEach((cb) => cb(userId, this.getFitnessState(userId)));
+  },
+
+  // Sessions werden vollständig gesichert (das ist die eigentliche, nicht neu
+  // erzeugbare Trainingshistorie). Von den Übungen wird NUR die vom Nutzer
+  // kalibrierten Werte gesichert (siehe EXERCISE_SETTING_FIELDS) — die
+  // Übungsliste selbst (Namen, IDs, Typen) kommt immer aus dem aktuellen
+  // Seed/Migrationsstand, damit ein älterer Cloud-Snapshot niemals eine
+  // spätere Anpassung an den Übungsdefinitionen zurückdreht.
+  getFitnessState(userId) {
+    const exerciseSettings = {};
+    (state.exercises[userId] || []).forEach((ex) => {
+      const patch = {};
+      EXERCISE_SETTING_FIELDS.forEach((f) => {
+        if (ex[f] !== undefined) patch[f] = ex[f];
+      });
+      exerciseSettings[ex.id] = patch;
+    });
+    return {
+      sessionLogs: state.sessionLogs[userId] || [],
+      exerciseSettings,
+      restDays: state.restDays[userId] || [],
+      blockStart: (state.blockStart && state.blockStart[userId]) || null,
+      updatedAt: (state.fitnessUpdatedAt && state.fitnessUpdatedAt[userId]) || 0,
+    };
+  },
+
+  // Übernimmt einen Trainings-Datenstand von einem anderen Gerät bzw. stellt
+  // ihn nach Datenverlust wieder her. Ohne fitnessSaveListeners-Aufruf, sonst
+  // würde der gerade empfangene Stand sofort wieder zurück in die Cloud
+  // gepusht (Endlosschleife) — analog zu applyRemoteNutrition.
+  applyRemoteFitness(userId, remoteFitness) {
+    state.sessionLogs[userId] = remoteFitness.sessionLogs || [];
+    if (remoteFitness.exerciseSettings) {
+      (state.exercises[userId] || []).forEach((ex) => {
+        const patch = remoteFitness.exerciseSettings[ex.id];
+        if (patch) Object.assign(ex, patch);
+      });
+    }
+    state.restDays[userId] = remoteFitness.restDays || [];
+    if (!state.blockStart) state.blockStart = {};
+    state.blockStart[userId] = remoteFitness.blockStart || null;
+    if (!state.fitnessUpdatedAt) state.fitnessUpdatedAt = {};
+    state.fitnessUpdatedAt[userId] = remoteFitness.updatedAt || 0;
     save(state);
   },
 
